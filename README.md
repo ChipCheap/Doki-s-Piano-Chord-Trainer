@@ -1,7 +1,7 @@
 # Doki-s-Piano-Chord-Trainer
 A PWA app to train reading chords and playing them! Download the repository files and open the index.html to start using it. You can also run it on a mobile device, but this app is intended to be used with a piano that sends the MIDI output to whatever runs the app. Sound recognition is not supported, unfortunately.
 
-###How to use:
+## How to use:
 In the top right there is a settings menu with which you can enable/disable and weight the probability by which it will be randomized in a session.
 Save the settings to be able to recover them via import or simply leave it in localStorage.
 
