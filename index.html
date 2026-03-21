@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#1a1410" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="description" content="Piano Chord trainer" />
+  <title>Piano Chord Trainer</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Playfair+Display:wght@400;700&family=Source+Code+Pro:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<header>
+  <h1>Doki's Piano <span>Chord</span> Trainer</h1>
+  <p class="subtitle">Practice reading and playing chords!</p>
+  <button id="settingsBtn" class="settings-btn" title="Settings">&#9881;</button>
+</header>
+
+<div class="card">
+  <!-- CONTROLS -->
+  <div class="controls">
+    <div class="control-group">
+      <label>Root</label>
+      <select id="rootSelect"></select>
+    </div>
+    <div class="control-group">
+      <label>Chord Type</label>
+      <select id="typeSelect"></select>
+    </div>
+    <div class="control-group">
+      <label>Octave</label>
+      <select id="octaveSelect">
+        <option value="0">Octave 0</option>
+        <option value="1">Octave 1</option>
+        <option value="2">Octave 2</option>
+        <option value="3">Octave 3</option>
+        <option value="4" selected>Octave 4</option>
+        <option value="5">Octave 5</option>
+      </select>
+    </div>
+    <div class="control-group">
+      <label>Inversion</label>
+      <select id="inversionSelect">
+        <option value="0">Root Position</option>
+      </select>
+    </div>
+    <div class="control-group" style="flex-direction:row;gap:8px;align-items:flex-end;">
+      <button class="btn-play" id="playBtn">▶ Play</button>
+      <button class="btn-random" id="randomBtn">⚄ Random</button>
+      <button class="btn-practice" id="practiceBtn">▶ Start Practice</button>
+    </div>
+  </div>
+
+  <!-- CHORD TITLE -->
+  <div class="chord-title">
+    <h2 id="chordName">C Major</h2>
+    <div class="chord-notes-label" id="chordNotesList">C · E · G</div>
+  </div>
+
+  <!-- STAFF -->
+  <div class="staff-wrapper">
+    <canvas id="staffCanvas" width="780" height="400"></canvas>
+  </div>
+
+  <!-- PIANO -->
+  <div class="piano-row">
+    <label class="hide-chord-label">
+      <input type="checkbox" id="hideChordCheckbox" />
+      <span>Hide<br>target</span>
+    </label>
+    <div class="piano-wrapper">
+      <canvas id="pianoCanvas" width="780" height="120"></canvas>
+    </div>
+  </div>
+
+  <!-- COLLAPSIBLE: Chord Info + Palette -->
+  <div class="collapsible-section">
+    <button class="collapsible-toggle" id="infoToggle" aria-expanded="false">
+      <span class="collapsible-toggle-label">Chord Details &amp; Quick Select</span>
+      <span class="collapsible-arrow">▸</span>
+    </button>
+    <div class="collapsible-body" id="infoBody" hidden>
+
+      <!-- INFO -->
+      <div class="info-panel">
+        <div class="info-card">
+          <div class="label">Intervals</div>
+          <div class="value" id="infoIntervals">1 – 3 – 5</div>
+        </div>
+        <div class="info-card">
+          <div class="label">Formula</div>
+          <div class="value" id="infoFormula">R + 4 + 3</div>
+        </div>
+        <div class="info-card">
+          <div class="label">Quality</div>
+          <div class="value" id="infoQuality">Major</div>
+        </div>
+        <div class="info-card">
+          <div class="label">Notes</div>
+          <div class="value" id="infoNoteCount">3</div>
+        </div>
+      </div>
+
+      <hr class="divider" />
+
+      <!-- CHORD PALETTE -->
+      <div class="palette-section">
+        <h3>Quick Select — Chord Family</h3>
+        <div class="palette-grid" id="paletteGrid"></div>
+      </div>
+
+    </div><!-- /.collapsible-body -->
+  </div><!-- /.collapsible-section -->
+</div>
+
+<!-- PRACTICE RESULTS -->
+<div id="practiceResults" class="card practice-results-card" style="display:none;">
+  <div class="practice-results-header">
+    <h3 class="practice-results-title">Practice Results</h3>
+    <button id="practiceClearBtn" class="practice-clear-btn">✕ Clear</button>
+  </div>
+  <div id="practiceResultsList" class="practice-results-list"></div>
+</div>
+
+<!-- MIDI PANEL -->
+<div class="card midi-card">
+  <div class="midi-header">
+    <span class="midi-dot" id="midiStatusDot"></span>
+    <span class="midi-label">MIDI Input</span>
+    <span id="midiStatus">Connecting…</span>
+    <span id="midiDeviceName" class="midi-device"></span>
+  </div>
+  <div class="midi-body">
+    <div class="midi-row">
+      <span class="midi-field-label">Held notes</span>
+      <span id="midiHeldNotes" class="midi-held">—</span>
+    </div>
+    <div id="midiResult" class="midi-result idle">Play the chord…</div>
+  </div>
+</div>
+
+<!-- SETTINGS MODAL -->
+<div id="settingsModal" style="display:none;">
+  <div id="settingsPanel" class="settings-panel">
+
+    <!-- Header (static) -->
+    <div class="sp-header">
+      <h2 class="sp-title">Settings</h2>
+      <button class="sp-close" onclick="closeSettings()">✕</button>
+    </div>
+
+    <!-- Octaves section -->
+    <div class="sp-section">
+      <h3 class="sp-section-title">Octaves</h3>
+      <div id="sp-octave-rows"></div>
+    </div>
+
+    <!-- Chord types section -->
+    <div class="sp-section">
+      <h3 class="sp-section-title">Chord Types</h3>
+      <div id="sp-chord-rows"></div>
+    </div>
+
+    <!-- Footer (static) -->
+    <div class="sp-footer">
+      <button class="sp-save-btn" id="spSaveBtn">💾 Save Settings</button>
+      <label class="sp-import-label" id="spImportLabel">
+        📂 Import JSON
+        <input type="file" id="spImportInput" accept=".json,application/json" class="sp-file-input" />
+      </label>
+      <button class="sp-reset-btn" id="spResetBtn">↺ Reset</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- INSTALL BANNER -->
+<div id="installBanner" style="display:none;">
+  <span>Install as App</span>
+  <button id="installBtn">Install</button>
+  <button class="dismiss" id="dismissBtn">×</button>
+</div>
+
+<!-- Load order matters: each file may reference globals from earlier files -->
+<script src="music.js"></script>
+<script src="rendering.js"></script>
+<script src="audio.js"></script>
+<script src="settings.js"></script>
+<script src="midi.js"></script>
+<script src="practice.js"></script>
+<script src="ui.js"></script>
+</body>
+</html>

@@ -1,0 +1,756 @@
+    :root {
+      --ink:        #1a1410;
+      --paper:      #f5f0e8;
+      --paper-dark: #ede6d4;
+      --sepia:      #c8a96e;
+      --red-accent: #8b1a1a;
+      --staff-line: #2a2018;
+      --note-fill:  #1a1410;
+      --shadow:     rgba(0,0,0,0.18);
+      --radius:     6px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'IM Fell English', serif;
+      background: var(--ink);
+      color: var(--ink);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* ── PAPER TEXTURE OVERLAY ── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image:
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── HEADER ── */
+    header {
+      width: 100%;
+      max-width: 900px;
+      padding: 28px 24px 0;
+      text-align: center;
+      position: relative;
+      z-index: 1;
+    }
+    header h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(1.6rem, 5vw, 2.8rem);
+      color: var(--paper);
+      letter-spacing: 0.06em;
+      font-weight: 700;
+      line-height: 1.1;
+    }
+    header h1 span { color: var(--sepia); }
+    header p.subtitle {
+      font-family: 'IM Fell English', serif;
+      font-style: italic;
+      color: #a09070;
+      font-size: 0.9rem;
+      margin-top: 4px;
+    }
+
+    /* ── MAIN CARD ── */
+    .card {
+      background: var(--paper);
+      border-radius: 3px;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.55), inset 0 0 0 1px rgba(200,169,110,0.3);
+      width: calc(100% - 32px);
+      max-width: 860px;
+      margin: 20px auto 32px;
+      padding: 28px 28px 32px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* aged paper gradient */
+    .card::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse at 20% 10%, rgba(255,240,200,0.4) 0%, transparent 60%),
+                  radial-gradient(ellipse at 80% 90%, rgba(180,140,80,0.12) 0%, transparent 50%);
+      border-radius: 3px;
+      pointer-events: none;
+    }
+
+    /* ── CONTROLS ── */
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: flex-end;
+      margin-bottom: 24px;
+      position: relative;
+    }
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .control-group label {
+      font-size: 0.68rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #7a6040;
+    }
+    select, button {
+      font-family: 'IM Fell English', serif;
+      font-size: 1rem;
+      border: 1.5px solid #c8a96e;
+      background: var(--paper-dark);
+      color: var(--ink);
+      padding: 7px 14px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      appearance: none;
+      outline: none;
+      transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+    }
+    select:focus, select:hover { border-color: var(--red-accent); box-shadow: 0 0 0 2px rgba(139,26,26,0.12); }
+    select { padding-right: 30px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238b6030' stroke-width='1.8' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; }
+
+    .btn-play {
+      background: var(--ink);
+      color: var(--paper);
+      border-color: var(--ink);
+      font-size: 0.88rem;
+      letter-spacing: 0.08em;
+      padding: 8px 20px;
+    }
+    .btn-play:hover { background: var(--red-accent); border-color: var(--red-accent); }
+    .btn-play:active { transform: translateY(1px); }
+
+    .btn-random {
+      background: var(--paper-dark);
+      font-size: 0.88rem;
+      letter-spacing: 0.05em;
+      padding: 8px 16px;
+    }
+    .btn-random:hover { border-color: var(--red-accent); }
+
+    /* ── CHORD NAME DISPLAY ── */
+    .chord-title {
+      text-align: center;
+      margin-bottom: 16px;
+    }
+    .chord-title h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(1.4rem, 4vw, 2.2rem);
+      color: var(--ink);
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+    .chord-title .chord-notes-label {
+      font-style: italic;
+      font-size: 0.85rem;
+      color: #7a6040;
+      margin-top: 2px;
+    }
+
+    /* ── STAFF CANVAS WRAPPER ── */
+    .staff-wrapper {
+      position: relative;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    #staffCanvas {
+      display: block;
+      margin: 0 auto;
+      max-width: 100%;
+    }
+
+    /* ── PIANO KEYBOARD ── */
+    .piano-wrapper {
+      margin-top: 24px;
+      display: flex;
+      justify-content: center;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    #pianoCanvas {
+      display: block;
+    }
+
+    /* ── INFO PANEL ── */
+    .info-panel {
+      margin-top: 22px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 12px;
+    }
+    .info-card {
+      background: var(--paper-dark);
+      border: 1px solid rgba(200,169,110,0.45);
+      border-radius: var(--radius);
+      padding: 10px 14px;
+    }
+    .info-card .label {
+      font-size: 0.62rem;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      color: #9a7040;
+      margin-bottom: 3px;
+    }
+    .info-card .value {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.05rem;
+      color: var(--ink);
+    }
+
+    /* ── CHORD PALETTE ── */
+    .palette-section {
+      margin-top: 20px;
+      position: relative;
+    }
+    .palette-section h3 {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      color: #9a7040;
+      margin-bottom: 10px;
+    }
+    .palette-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .palette-btn {
+      font-family: 'Source Code Pro', monospace;
+      font-size: 0.72rem;
+      padding: 5px 10px;
+      border: 1px solid #c8a96e;
+      border-radius: 4px;
+      background: var(--paper-dark);
+      color: var(--ink);
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, transform 0.1s;
+    }
+    .palette-btn:hover { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+    .palette-btn.active { background: var(--red-accent); color: var(--paper); border-color: var(--red-accent); }
+
+    /* ── DIVIDER ── */
+    .divider {
+      border: none;
+      border-top: 1px solid rgba(200,169,110,0.4);
+      margin: 20px 0;
+    }
+
+    /* ── INSTALL BANNER ── */
+    #installBanner {
+      display: none;
+      position: fixed;
+      bottom: 16px; left: 50%; transform: translateX(-50%);
+      background: var(--ink);
+      color: var(--paper);
+      border: 1px solid var(--sepia);
+      border-radius: var(--radius);
+      padding: 10px 20px;
+      font-size: 0.85rem;
+      z-index: 999;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+      display: flex; gap: 12px; align-items: center;
+    }
+    #installBanner button { font-size: 0.8rem; padding: 4px 12px; }
+    #installBanner .dismiss { background: transparent; color: #a09070; border-color: #a09070; font-size: 0.75rem; padding: 4px 10px; }
+
+    @media (max-width: 520px) {
+      .card { padding: 18px 14px 24px; }
+      .controls { gap: 8px; }
+    }
+
+/* ── MIDI PANEL ── */
+    .midi-card {
+      margin-top: 0;
+      margin-bottom: 32px;
+      padding: 18px 28px;
+    }
+    .midi-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .midi-label {
+      font-family: 'Playfair Display', serif;
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--ink);
+    }
+    #midiStatus {
+      font-size: 0.8rem;
+      color: #7a6040;
+      font-style: italic;
+    }
+    .midi-device {
+      font-family: 'Source Code Pro', monospace;
+      font-size: 0.75rem;
+      color: #9a7040;
+      margin-left: auto;
+    }
+    .midi-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #aaa;
+      flex-shrink: 0;
+      transition: background 0.3s;
+    }
+    .midi-dot.connected   { background: #4a9e5c; }
+    .midi-dot.no-device   { background: #c8a030; }
+    .midi-dot.denied,
+    .midi-dot.unavailable { background: #9e3a2e; }
+
+    .midi-body {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .midi-row {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+    }
+    .midi-field-label {
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.13em;
+      color: #9a7040;
+      min-width: 80px;
+    }
+    .midi-held {
+      font-family: 'Source Code Pro', monospace;
+      font-size: 0.9rem;
+      color: var(--ink);
+      letter-spacing: 0.05em;
+    }
+    .midi-result {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.1rem;
+      padding: 10px 16px;
+      border-radius: var(--radius);
+      transition: background 0.25s, color 0.25s;
+    }
+    /* ── PIANO ROW (checkbox + keyboard) ── */
+    .piano-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 24px;
+    }
+    .piano-row .piano-wrapper {
+      margin-top: 0;
+      flex: 1;
+      min-width: 0;
+    }
+    .hide-chord-label {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+      cursor: pointer;
+      flex-shrink: 0;
+      user-select: none;
+    }
+    .hide-chord-label input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--red-accent);
+      cursor: pointer;
+      border: none;
+      padding: 0;
+      appearance: auto;
+    }
+    .hide-chord-label span {
+      font-size: 0.6rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #9a7040;
+      text-align: center;
+      line-height: 1.3;
+    }
+
+    .midi-result.idle    { background: var(--paper-dark); color: #9a7040; }
+    .midi-result.correct { background: #2a5c35; color: #d4f0db; }
+    .midi-result.extra   { background: #3a5c2a; color: #d8f0c8; }
+    .midi-result.wrong   { background: #5c2a2a; color: #f0d0c8; }
+
+    /* ── SETTINGS BUTTON ── */
+    header { position: relative; }
+    .settings-btn {
+      position: absolute;
+      top: 0; right: 24px;
+      background: transparent;
+      border: 1.5px solid rgba(200,169,110,0.5);
+      color: var(--paper);
+      font-size: 1.3rem;
+      width: 38px; height: 38px;
+      padding: 0;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s, transform 0.3s;
+      z-index: 2;
+    }
+    .settings-btn:hover {
+      background: rgba(200,169,110,0.15);
+      border-color: var(--sepia);
+      transform: rotate(45deg);
+    }
+
+    /* ── SETTINGS MODAL OVERLAY ── */
+    #settingsModal {
+      position: fixed; inset: 0;
+      background: rgba(20,15,8,0.72);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 900;
+      opacity: 0;
+      transition: opacity 0.22s ease;
+    }
+    #settingsModal.visible { opacity: 1; }
+
+    /* ── SETTINGS PANEL ── */
+    .settings-panel {
+      background: var(--paper);
+      border-radius: 4px;
+      box-shadow: 0 16px 60px rgba(0,0,0,0.6), inset 0 0 0 1px rgba(200,169,110,0.3);
+      width: min(680px, calc(100vw - 32px));
+      max-height: calc(100vh - 48px);
+      overflow-y: auto;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── SETTINGS PANEL INTERNALS ── */
+    .sp-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 24px 16px;
+      border-bottom: 1px solid rgba(200,169,110,0.35);
+      position: sticky; top: 0;
+      background: var(--paper);
+      z-index: 1;
+    }
+    .sp-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.3rem;
+      color: var(--ink);
+      font-weight: 700;
+    }
+    .sp-close {
+      background: transparent;
+      border: 1.5px solid rgba(200,169,110,0.5);
+      color: var(--ink);
+      font-size: 1rem;
+      width: 30px; height: 30px;
+      padding: 0;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .sp-close:hover { background: var(--paper-dark); border-color: var(--sepia); }
+
+    .sp-section {
+      padding: 16px 24px 20px;
+      border-bottom: 1px solid rgba(200,169,110,0.2);
+    }
+    .sp-section:last-child { border-bottom: none; }
+
+    .sp-section-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #7a6040;
+      margin-bottom: 12px;
+    }
+
+    /* Row: checkbox + label + value + slider */
+    .sp-row {
+      display: grid;
+      grid-template-columns: 18px 1fr 36px 140px;
+      align-items: center;
+      gap: 8px 10px;
+      padding: 4px 0;
+    }
+    .sp-checkbox {
+      width: 15px; height: 15px;
+      accent-color: var(--red-accent);
+      cursor: pointer;
+      justify-self: center;
+    }
+    .sp-label {
+      font-family: 'IM Fell English', serif;
+      font-size: 0.88rem;
+      color: var(--ink);
+      cursor: pointer;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .sp-weight-val {
+      font-family: 'Source Code Pro', monospace;
+      font-size: 0.72rem;
+      color: #9a7040;
+      text-align: right;
+    }
+    .sp-slider {
+      width: 100%;
+      accent-color: var(--red-accent);
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      padding: 0;
+      appearance: auto;
+      height: 4px;
+    }
+
+    /* Group block */
+    .sp-group { margin-bottom: 6px; }
+    .sp-group-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .sp-group-row {
+      flex: 1;
+      background: var(--paper-dark);
+      border-radius: 4px;
+      padding: 5px 8px;
+    }
+    .sp-toggle {
+      flex-shrink: 0;
+      width: 24px; height: 24px;
+      background: transparent;
+      border: 1px solid rgba(200,169,110,0.4);
+      border-radius: 4px;
+      color: #7a6040;
+      font-size: 0.75rem;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      padding: 0;
+      transition: background 0.15s;
+    }
+    .sp-toggle:hover { background: var(--paper-dark); }
+
+    .sp-group-children { margin-left: 30px; margin-top: 2px; overflow: hidden; }
+    .sp-group-children.collapsed { display: none; }
+    .sp-type-row { padding: 2px 0; }
+
+    @media (max-width: 520px) {
+      .sp-row { grid-template-columns: 18px 1fr 32px 90px; }
+      .settings-panel { padding: 0; }
+      .settings-btn { right: 12px; }
+    }
+
+    /* ── SETTINGS FOOTER ── */
+    .sp-footer {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      padding: 16px 24px;
+      border-top: 1px solid rgba(200,169,110,0.35);
+      position: sticky; bottom: 0;
+      background: var(--paper);
+    }
+    .sp-save-btn {
+      font-family: 'IM Fell English', serif;
+      font-size: 0.9rem;
+      padding: 8px 20px;
+      background: var(--ink);
+      color: var(--paper);
+      border: 1.5px solid var(--ink);
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .sp-save-btn:hover { background: var(--red-accent); border-color: var(--red-accent); }
+    .sp-import-label {
+      font-family: 'IM Fell English', serif;
+      font-size: 0.9rem;
+      padding: 7px 18px;
+      background: var(--paper-dark);
+      color: var(--ink);
+      border: 1.5px solid #c8a96e;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+    .sp-import-label:hover { border-color: var(--red-accent); }
+
+    /* ── SETTINGS RESET BUTTON ── */
+    .sp-reset-btn {
+      font-family: 'IM Fell English', serif;
+      font-size: 0.9rem;
+      padding: 7px 16px;
+      background: var(--paper-dark);
+      color: var(--ink);
+      border: 1.5px solid #c8a96e;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+      margin-left: auto;
+    }
+    .sp-reset-btn:hover { border-color: var(--red-accent); background: #f0e0e0; }
+
+    /* Hide the native file input inside the import label */
+    .sp-file-input { display: none; }
+
+    /* ── PRACTICE SESSION BUTTON ── */
+    .btn-practice {
+      background: var(--paper-dark);
+      font-size: 0.88rem;
+      letter-spacing: 0.05em;
+      padding: 8px 16px;
+      border: 1.5px solid #c8a96e;
+      border-radius: var(--radius);
+    }
+    .btn-practice:hover { border-color: var(--red-accent); }
+    .btn-practice.active {
+      background: var(--red-accent);
+      color: var(--paper);
+      border-color: var(--red-accent);
+    }
+
+    /* ── PRACTICE RESULTS CARD ── */
+    .practice-results-card {
+      margin-top: 0;
+      margin-bottom: 32px;
+      padding: 20px 28px 24px;
+    }
+    .practice-results-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .practice-results-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--ink);
+      letter-spacing: 0.04em;
+    }
+    .practice-clear-btn {
+      font-family: 'IM Fell English', serif;
+      font-size: 0.8rem;
+      padding: 4px 12px;
+      background: transparent;
+      color: #9a7040;
+      border: 1px solid rgba(200,169,110,0.5);
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .practice-clear-btn:hover { border-color: var(--red-accent); color: var(--red-accent); }
+
+    /* ── PRACTICE THUMBNAIL GRID ── */
+    .practice-results-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .practice-thumb {
+      background: var(--paper-dark);
+      border: 1px solid rgba(200,169,110,0.4);
+      border-radius: var(--radius);
+      padding: 8px 10px 10px;
+      width: 180px;
+      flex-shrink: 0;
+    }
+    .practice-thumb-name {
+      font-family: 'Playfair Display', serif;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--ink);
+      text-align: center;
+      margin-bottom: 6px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .practice-thumb-canvas {
+      display: block;
+      width: 100%;
+      height: 60px;
+      border-radius: 3px;
+    }
+
+    /* ── COLLAPSIBLE SECTION ── */
+    .collapsible-section {
+      margin-top: 20px;
+    }
+    .collapsible-toggle {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--paper-dark);
+      border: 1px solid rgba(200,169,110,0.4);
+      border-radius: var(--radius);
+      padding: 8px 14px;
+      cursor: pointer;
+      font-family: 'IM Fell English', serif;
+      font-size: 0.82rem;
+      color: #7a6040;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      transition: background 0.15s, border-color 0.15s;
+      appearance: none;
+      outline: none;
+    }
+    .collapsible-toggle:hover {
+      background: #e8e0cc;
+      border-color: var(--sepia);
+    }
+    .collapsible-arrow {
+      font-size: 0.75rem;
+      transition: transform 0.18s;
+    }
+    .collapsible-body {
+      padding-top: 4px;
+    }
+    /* When hidden attribute is present the body is invisible;
+       the browser already handles display:none for [hidden],
+       so no extra CSS needed. */
+
+    /* ── SETTINGS: INVERSION CHECKBOXES ── */
+    .sp-inv-header {
+      font-size: 0.62rem;
+      text-transform: uppercase;
+      letter-spacing: 0.13em;
+      color: #9a7040;
+      margin: 8px 0 4px 0;
+    }
+    .sp-inv-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 16px;
+      margin-bottom: 6px;
+    }
+    .sp-inv-label {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-family: 'IM Fell English', serif;
+      font-size: 0.82rem;
+      color: var(--ink);
+      cursor: pointer;
+    }
+    .sp-inv-label input[type="checkbox"] {
+      accent-color: var(--red-accent);
+      width: 13px; height: 13px;
+      cursor: pointer;
+    }

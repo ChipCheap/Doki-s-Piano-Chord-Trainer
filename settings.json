@@ -1,0 +1,203 @@
+{
+  "octaves": {
+    "0": {
+      "enabled": false,
+      "weight": 5
+    },
+    "1": {
+      "enabled": true,
+      "weight": 12
+    },
+    "2": {
+      "enabled": true,
+      "weight": 100
+    },
+    "3": {
+      "enabled": true,
+      "weight": 100
+    },
+    "4": {
+      "enabled": true,
+      "weight": 53
+    },
+    "5": {
+      "enabled": false,
+      "weight": 14
+    }
+  },
+  "groups": {
+    "Triads": {
+      "enabled": true,
+      "weight": 100,
+      "expanded": true,
+      "types": {
+        "Major": {
+          "enabled": true,
+          "weight": 100
+        },
+        "Minor": {
+          "enabled": true,
+          "weight": 100
+        },
+        "Diminished": {
+          "enabled": true,
+          "weight": 53
+        },
+        "Augmented": {
+          "enabled": true,
+          "weight": 65
+        },
+        "Sus2": {
+          "enabled": true,
+          "weight": 100
+        },
+        "Sus4": {
+          "enabled": true,
+          "weight": 100
+        }
+      },
+      "inversions": [
+        true,
+        true,
+        true
+      ]
+    },
+    "7ths": {
+      "enabled": true,
+      "weight": 52,
+      "expanded": true,
+      "types": {
+        "Major 7th": {
+          "enabled": true,
+          "weight": 100
+        },
+        "Minor 7th": {
+          "enabled": true,
+          "weight": 100
+        },
+        "Dominant 7th": {
+          "enabled": true,
+          "weight": 65
+        },
+        "Minor Major 7th": {
+          "enabled": true,
+          "weight": 29
+        },
+        "Half Dim 7th": {
+          "enabled": true,
+          "weight": 23
+        },
+        "Diminished 7th": {
+          "enabled": true,
+          "weight": 32
+        },
+        "Augmented 7th": {
+          "enabled": true,
+          "weight": 28
+        },
+        "Aug Maj 7th": {
+          "enabled": true,
+          "weight": 14
+        }
+      },
+      "inversions": [
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    "9ths": {
+      "enabled": false,
+      "weight": 100,
+      "expanded": false,
+      "types": {
+        "Add 9": {
+          "enabled": true,
+          "weight": 100
+        },
+        "Major 9th": {
+          "enabled": true,
+          "weight": 100
+        },
+        "Minor 9th": {
+          "enabled": true,
+          "weight": 100
+        },
+        "Dominant 9th": {
+          "enabled": true,
+          "weight": 100
+        }
+      },
+      "inversions": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    "11ths": {
+      "enabled": false,
+      "weight": 100,
+      "expanded": false,
+      "types": {
+        "Major 11th": {
+          "enabled": true,
+          "weight": 100
+        },
+        "Dominant 11th": {
+          "enabled": true,
+          "weight": 100
+        }
+      },
+      "inversions": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    "13ths": {
+      "enabled": false,
+      "weight": 100,
+      "expanded": false,
+      "types": {
+        "Major 13th": {
+          "enabled": true,
+          "weight": 100
+        },
+        "Dominant 13th": {
+          "enabled": true,
+          "weight": 100
+        }
+      },
+      "inversions": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    "Pentatonic": {
+      "enabled": true,
+      "weight": 100,
+      "expanded": true,
+      "types": {
+        "Power (5th)": {
+          "enabled": true,
+          "weight": 100
+        }
+      },
+      "inversions": [
+        true,
+        true
+      ]
+    }
+  }
+}
