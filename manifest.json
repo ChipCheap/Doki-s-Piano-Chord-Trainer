@@ -1,8 +1,8 @@
 {
   "name": "Piano Chord Trainer",
-  "short_name": "Chord Trainer",
+  "short_name": "Doki Chords",
   "description": "Practice reading and playing chords!",
-  "start_url": "/",
+  "start_url": "/Doki-s-Piano-Chord-Trainer/",
   "display": "standalone",
   "background_color": "#1a1410",
   "theme_color": "#1a1410",

@@ -6,7 +6,7 @@
     },
     "1": {
       "enabled": true,
-      "weight": 12
+      "weight": 23
     },
     "2": {
       "enabled": true,
@@ -21,8 +21,8 @@
       "weight": 53
     },
     "5": {
-      "enabled": false,
-      "weight": 14
+      "enabled": true,
+      "weight": 12
     }
   },
   "groups": {
@@ -41,25 +41,25 @@
         },
         "Diminished": {
           "enabled": true,
-          "weight": 53
+          "weight": 36
         },
         "Augmented": {
           "enabled": true,
-          "weight": 65
+          "weight": 51
         },
         "Sus2": {
           "enabled": true,
-          "weight": 100
+          "weight": 60
         },
         "Sus4": {
           "enabled": true,
-          "weight": 100
+          "weight": 57
         }
       },
       "inversions": [
         true,
-        true,
-        true
+        false,
+        false
       ]
     },
     "7ths": {
@@ -77,64 +77,64 @@
         },
         "Dominant 7th": {
           "enabled": true,
-          "weight": 65
+          "weight": 46
         },
         "Minor Major 7th": {
           "enabled": true,
-          "weight": 29
+          "weight": 17
         },
         "Half Dim 7th": {
           "enabled": true,
-          "weight": 23
+          "weight": 9
         },
         "Diminished 7th": {
           "enabled": true,
-          "weight": 32
+          "weight": 19
         },
         "Augmented 7th": {
           "enabled": true,
-          "weight": 28
+          "weight": 17
         },
         "Aug Maj 7th": {
           "enabled": true,
-          "weight": 14
+          "weight": 8
         }
       },
       "inversions": [
         true,
-        true,
-        true,
-        true
+        false,
+        false,
+        false
       ]
     },
     "9ths": {
-      "enabled": false,
-      "weight": 100,
-      "expanded": false,
+      "enabled": true,
+      "weight": 20,
+      "expanded": true,
       "types": {
         "Add 9": {
           "enabled": true,
           "weight": 100
         },
         "Major 9th": {
-          "enabled": true,
+          "enabled": false,
           "weight": 100
         },
         "Minor 9th": {
-          "enabled": true,
+          "enabled": false,
           "weight": 100
         },
         "Dominant 9th": {
-          "enabled": true,
+          "enabled": false,
           "weight": 100
         }
       },
       "inversions": [
         true,
-        true,
-        true,
-        true,
-        true
+        false,
+        false,
+        false,
+        false
       ]
     },
     "11ths": {
@@ -196,7 +196,7 @@
       },
       "inversions": [
         true,
-        true
+        false
       ]
     }
   }
