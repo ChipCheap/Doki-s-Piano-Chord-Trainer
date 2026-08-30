@@ -3,15 +3,24 @@
 // ═══════════════════════════════════════════════
 
 const CHORD_GROUPS = [
-    { name: 'Triads',     types: ['Major','Minor','Diminished','Augmented','Sus2','Sus4'],                                                                    maxNotes: 3 },
-    { name: '7ths',       types: ['Major 7th','Minor 7th','Dominant 7th','Minor Major 7th','Half Dim 7th','Diminished 7th','Augmented 7th','Aug Maj 7th'],    maxNotes: 4 },
-    { name: '9ths',       types: ['Add 9','Major 9th','Minor 9th','Dominant 9th'],                                                                            maxNotes: 5 },
-    { name: '11ths',      types: ['Major 11th','Dominant 11th'],                                                                                              maxNotes: 6 },
-    { name: '13ths',      types: ['Major 13th','Dominant 13th'],                                                                                              maxNotes: 7 },
-    { name: 'Pentatonic', types: ['Power (5th)'],                                                                                                             maxNotes: 2 },
+    { name: 'Triads',     types: ['Major','Minor','Diminished','Augmented','Sus2','Sus4'] },
+    { name: '7ths',       types: ['Major 7th','Minor 7th','Dominant 7th','Minor Major 7th','Half Dim 7th','Diminished 7th','Augmented 7th','Aug Maj 7th'] },
+    { name: '9ths',       types: ['Add 9','Major 9th','Minor 9th','Dominant 9th'] },
+    { name: '11ths',      types: ['Major 11th','Dominant 11th'] },
+    { name: '13ths',      types: ['Major 13th','Dominant 13th'] },
+    { name: 'Pentatonic', types: ['Power (5th)'] },
 ];
 
-const OCTAVE_RANGE = [0, 1, 2, 3, 4, 5];
+// Octave 0 is excluded: C0 is MIDI 12, below the lowest key of an 88-key
+// piano (A0 = 21), and midi.js rejects anything under 21 — so an octave-0
+// chord can never be played correctly, and its ledger lines run off the staff.
+const OCTAVE_RANGE = [1, 2, 3, 4, 5];
+
+// Longest inversion list any type in this group needs. Types that offer fewer
+// (Add 9 among the 9ths) are clamped again when a chord is actually picked.
+function groupInversionCount(group) {
+    return Math.max(...group.types.map(t => inversionCount(CHORD_TYPES[t])));
+}
 
 const randomSettings = {
     octaves: Object.fromEntries(OCTAVE_RANGE.map(o => [o, { enabled: true, weight: 100 }])),
@@ -19,13 +28,33 @@ const randomSettings = {
         enabled: true, weight: 100, expanded: true,
         types: Object.fromEntries(g.types.map(t => [t, { enabled: true, weight: 100 }])),
         // One enabled flag per possible inversion (index 0 = root position)
-        inversions: Array.from({ length: g.maxNotes }, () => true),
+        inversions: Array.from({ length: groupInversionCount(g) }, () => true),
     }])),
 };
 
 // ── Persistence ───────────────────────────────
+// Every localStorage touch goes through these. Where storage is blocked (some
+// file:// contexts, strict privacy modes) the raw calls throw, and an
+// unguarded throw at load time would abort the rest of this file — taking the
+// settings button's listener at the bottom with it.
+function readStored(key) {
+    try { return localStorage.getItem(key); } catch (e) { return null; }
+}
+function writeStored(key, value) {
+    try { localStorage.setItem(key, value); return true; } catch (e) { return false; }
+}
+
 function saveSettingsToStorage() {
-    localStorage.setItem('pianoChordSettings', JSON.stringify(randomSettings));
+    return writeStored('pianoChordSettings', JSON.stringify(randomSettings));
+}
+
+// Settings persist as you change them. Requiring an explicit Save was losing
+// every adjustment made by anyone who closed the modal without pressing it.
+let autoSaveTimer = null;
+function settingsChanged() {
+    clearTimeout(autoSaveTimer);
+    autoSaveTimer = setTimeout(saveSettingsToStorage, 300);
+    refreshEmptyWarnings();
 }
 
 function loadSettingsFromStorage(data) {
@@ -38,7 +67,10 @@ function loadSettingsFromStorage(data) {
         if (data.groups) {
             for (const [gk, gv] of Object.entries(data.groups)) {
                 if (!randomSettings.groups[gk]) continue;
-                const { types, ...groupMeta } = gv;
+                // inversions is destructured out alongside types: leaving it
+                // in groupMeta let Object.assign replace the array wholesale,
+                // which silently defeated the length guard below.
+                const { types, inversions, ...groupMeta } = gv;
                 Object.assign(randomSettings.groups[gk], groupMeta);
                 if (types) {
                     for (const [tk, tv] of Object.entries(types)) {
@@ -47,10 +79,10 @@ function loadSettingsFromStorage(data) {
                         }
                     }
                 }
-                if (gv.inversions && Array.isArray(gv.inversions)) {
-                    gv.inversions.forEach((v, i) => {
+                if (Array.isArray(inversions)) {
+                    inversions.forEach((v, i) => {
                         if (i < randomSettings.groups[gk].inversions.length) {
-                            randomSettings.groups[gk].inversions[i] = v;
+                            randomSettings.groups[gk].inversions[i] = !!v;
                         }
                     });
                 }
@@ -61,7 +93,7 @@ function loadSettingsFromStorage(data) {
 
 // Restore on startup
 (function () {
-    const stored = localStorage.getItem('pianoChordSettings');
+    const stored = readStored('pianoChordSettings');
     if (stored) { try { loadSettingsFromStorage(JSON.parse(stored)); } catch (e) {} }
 })();
 
@@ -74,14 +106,14 @@ function weightedPick(candidates) {
     return candidates[candidates.length - 1].item;
 }
 
-function randomizeChord() {
-    const octCandidates = OCTAVE_RANGE
+function octaveCandidates() {
+    return OCTAVE_RANGE
         .filter(o => randomSettings.octaves[o].enabled && randomSettings.octaves[o].weight > 0)
         .map(o => ({ item: o, weight: randomSettings.octaves[o].weight }));
-    const chosenOctave = weightedPick(octCandidates);
-    if (chosenOctave === null) return false;
+}
 
-    const typeCandidates = [];
+function typeCandidates() {
+    const out = [];
     for (const group of CHORD_GROUPS) {
         const gs = randomSettings.groups[group.name];
         if (!gs.enabled || gs.weight === 0) continue;
@@ -89,11 +121,32 @@ function randomizeChord() {
             const ts = gs.types[type];
             if (!ts.enabled || ts.weight === 0) continue;
             const effectiveWeight = (gs.weight * ts.weight) / 100;
-            if (effectiveWeight > 0) typeCandidates.push({ item: type, weight: effectiveWeight });
+            if (effectiveWeight > 0) out.push({ item: type, weight: effectiveWeight });
         }
     }
-    const chosenType = weightedPick(typeCandidates);
-    if (chosenType === null) return false;
+    return out;
+}
+
+function hasRandomCandidates() {
+    return octaveCandidates().length > 0 && typeCandidates().length > 0;
+}
+
+// Randomising silently did nothing when everything was switched off. Say so,
+// in both places the user could be looking, and only in that state.
+function refreshEmptyWarnings() {
+    const empty = !hasRandomCandidates();
+    const main  = document.getElementById('randomWarning');
+    const panel = document.getElementById('spEmptyWarning');
+    if (main)  main.hidden  = !empty;
+    if (panel) panel.hidden = !empty;
+}
+
+function randomizeChord() {
+    const chosenOctave = weightedPick(octaveCandidates());
+    if (chosenOctave === null) { refreshEmptyWarnings(); return false; }
+
+    const chosenType = weightedPick(typeCandidates());
+    if (chosenType === null) { refreshEmptyWarnings(); return false; }
 
     rootSelect.value   = Math.floor(Math.random() * ALL_ROOT_NOTES.length);
     octaveSelect.value = chosenOctave;
@@ -103,16 +156,16 @@ function randomizeChord() {
     // clamped to the actual note count of the chosen chord type.
     const chosenGroup = CHORD_GROUPS.find(g => g.types.includes(chosenType));
     if (chosenGroup) {
-        const noteCount = CHORD_TYPES[chosenType].semitones.length;
+        const invCount = inversionCount(CHORD_TYPES[chosenType]);
         const gs = randomSettings.groups[chosenGroup.name];
         const invCandidates = gs.inversions
-            .slice(0, noteCount) // can't exceed actual note count
+            .slice(0, invCount) // this type may offer fewer than the group does
             .map((enabled, i) => enabled ? i : null)
             .filter(i => i !== null);
         const chosenInv = invCandidates.length > 0
             ? invCandidates[Math.floor(Math.random() * invCandidates.length)]
             : 0;
-        repopulateInversionSelect(noteCount);
+        repopulateInversionSelect(invCount);
         inversionSelect.value = chosenInv;
     }
 
@@ -121,9 +174,24 @@ function randomizeChord() {
 }
 
 // ── Settings modal ────────────────────────────
+// Hiding the modal has to wait for the fade, which leaves a pending handler
+// that must be cancellable — otherwise reopening mid-fade lets the old close
+// finish and hide the modal that just reopened.
+let closeTimer = null;
+let closeHandler = null;
+
+function cancelPendingClose() {
+    const modal = document.getElementById('settingsModal');
+    clearTimeout(closeTimer);
+    if (closeHandler) modal.removeEventListener('transitionend', closeHandler);
+    closeTimer = null;
+    closeHandler = null;
+}
+
 function openSettings() {
     buildSettingsModal();
     const modal = document.getElementById('settingsModal');
+    cancelPendingClose();
     modal.style.display = 'flex';
     requestAnimationFrame(() => modal.classList.add('visible'));
 }
@@ -131,7 +199,17 @@ function openSettings() {
 function closeSettings() {
     const modal = document.getElementById('settingsModal');
     modal.classList.remove('visible');
-    modal.addEventListener('transitionend', () => { modal.style.display = 'none'; }, { once: true });
+    cancelPendingClose();
+    // The timer is a fallback for when no transition runs at all (reduced
+    // motion, or the modal was already faded). The target check keeps a
+    // transitionend bubbling up from a child button from closing the panel.
+    closeHandler = e => {
+        if (e && e.target !== modal) return;
+        cancelPendingClose();
+        modal.style.display = 'none';
+    };
+    modal.addEventListener('transitionend', closeHandler);
+    closeTimer = setTimeout(closeHandler, 300);
 }
 
 document.getElementById('settingsModal').addEventListener('click', e => {
@@ -170,6 +248,7 @@ function buildSettingsModal() {
             gs.expanded = !gs.expanded;
             toggle.textContent = gs.expanded ? '▾' : '▸';
             childrenEl.classList.toggle('collapsed', !gs.expanded);
+            settingsChanged();
         });
 
         const groupRow = makeRow(
@@ -212,6 +291,7 @@ function buildSettingsModal() {
             cb.checked = enabled;
             cb.addEventListener('change', () => {
                 randomSettings.groups[group.name].inversions[i] = cb.checked;
+                settingsChanged();
             });
             label.appendChild(cb);
             label.appendChild(document.createTextNode(INVERSION_NAMES[i] || `Inv ${i}`));
@@ -223,58 +303,76 @@ function buildSettingsModal() {
         chordContainer.appendChild(groupBlock);
     });
 
-    // Wire footer buttons
-    const saveBtn     = document.getElementById('spSaveBtn');
-    const importLabel = document.getElementById('spImportLabel');
+    // Wire footer buttons. Save and Export were one button that always did
+    // both; downloading a file on every save was surprising, and with
+    // auto-save in place the two have nothing to do with each other.
+    const importText  = document.getElementById('spImportText');
     const importInput = document.getElementById('spImportInput');
-    const resetBtn    = document.getElementById('spResetBtn');
-    const freshSave   = saveBtn.cloneNode(true);
-    const freshReset  = resetBtn.cloneNode(true);
-    saveBtn.replaceWith(freshSave);
-    resetBtn.replaceWith(freshReset);
+    const flash = (el, msg, restore) => {
+        if (!el) return;
+        el.textContent = msg;
+        setTimeout(() => { el.textContent = restore; }, 1800);
+    };
 
-    freshSave.addEventListener('click', () => {
-        saveSettingsToStorage();
+    // Cloned to drop listeners from a previous build of the modal.
+    const replaceBtn = id => {
+        const old = document.getElementById(id);
+        if (!old) return null;
+        const fresh = old.cloneNode(true);
+        old.replaceWith(fresh);
+        return fresh;
+    };
+    const freshSave   = replaceBtn('spSaveBtn');
+    const freshExport = replaceBtn('spExportBtn');
+    const freshReset  = replaceBtn('spResetBtn');
+
+    if (freshSave) freshSave.addEventListener('click', () => {
+        const ok = saveSettingsToStorage();
+        flash(freshSave, ok ? '✓ Saved!' : '✗ Storage blocked', '💾 Save');
+    });
+
+    if (freshExport) freshExport.addEventListener('click', () => {
         const blob = new Blob([JSON.stringify(randomSettings, null, 2)], { type: 'application/json' });
         const url  = URL.createObjectURL(blob);
         const a    = document.createElement('a');
-        a.href = url; a.download = 'settings.json'; a.click();
+        a.href = url; a.download = 'doki-chord-settings.json'; a.click();
         URL.revokeObjectURL(url);
-        freshSave.textContent = '✓ Saved!';
-        setTimeout(() => { freshSave.textContent = '💾 Save Settings'; }, 1800);
+        flash(freshExport, '✓ Exported!', '⬇ Export File');
     });
 
-    importInput.value = '';
-    importInput.onchange = () => {
-        const file = importInput.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = e => {
-            try {
-                loadSettingsFromStorage(JSON.parse(e.target.result));
-                saveSettingsToStorage();
-                buildSettingsModal();
-                importLabel.textContent = '✓ Imported!';
-                setTimeout(() => { importLabel.textContent = '📂 Import JSON'; }, 1800);
-            } catch {
-                importLabel.textContent = '✗ Invalid file';
-                setTimeout(() => { importLabel.textContent = '📂 Import JSON'; }, 1800);
-            }
+    if (importInput) {
+        importInput.value = '';
+        importInput.onchange = () => {
+            const file = importInput.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = e => {
+                try {
+                    loadSettingsFromStorage(JSON.parse(e.target.result));
+                    saveSettingsToStorage();
+                    buildSettingsModal();
+                    flash(document.getElementById('spImportText'), '✓ Imported!', '📂 Import JSON');
+                } catch {
+                    flash(importText, '✗ Invalid file', '📂 Import JSON');
+                }
+            };
+            reader.readAsText(file);
         };
-        reader.readAsText(file);
-    };
+    }
 
-    freshReset.addEventListener('click', () => {
+    if (freshReset) freshReset.addEventListener('click', () => {
         OCTAVE_RANGE.forEach(o => { randomSettings.octaves[o] = { enabled: true, weight: 100 }; });
         CHORD_GROUPS.forEach(g => {
             randomSettings.groups[g.name].enabled = true;
             randomSettings.groups[g.name].weight  = 100;
             g.types.forEach(t => { randomSettings.groups[g.name].types[t] = { enabled: true, weight: 100 }; });
-            randomSettings.groups[g.name].inversions = Array.from({ length: g.maxNotes }, () => true);
+            randomSettings.groups[g.name].inversions = Array.from({ length: groupInversionCount(g) }, () => true);
         });
         saveSettingsToStorage();
         buildSettingsModal();
     });
+
+    refreshEmptyWarnings();
 }
 
 function makeRow(id, label, enabled, weight, onEnabled, onWeight) {
@@ -283,7 +381,7 @@ function makeRow(id, label, enabled, weight, onEnabled, onWeight) {
 
     const cb = document.createElement('input');
     cb.type = 'checkbox'; cb.id = 'cb-' + id; cb.checked = enabled; cb.className = 'sp-checkbox';
-    cb.addEventListener('change', () => onEnabled(cb.checked));
+    cb.addEventListener('change', () => { onEnabled(cb.checked); settingsChanged(); });
 
     const lbl = document.createElement('label');
     lbl.htmlFor = 'cb-' + id; lbl.textContent = label; lbl.className = 'sp-label';
@@ -299,6 +397,7 @@ function makeRow(id, label, enabled, weight, onEnabled, onWeight) {
         const v = parseInt(slider.value);
         onWeight(v);
         valDisplay.textContent = v + '%';
+        settingsChanged();
     });
 
     row.appendChild(cb); row.appendChild(lbl); row.appendChild(valDisplay); row.appendChild(slider);
@@ -306,3 +405,6 @@ function makeRow(id, label, enabled, weight, onEnabled, onWeight) {
 }
 
 document.getElementById('settingsBtn').addEventListener('click', openSettings);
+
+// Reflect the stored state on first load, before the modal is ever opened.
+refreshEmptyWarnings();

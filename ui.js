@@ -52,7 +52,6 @@ Object.keys(CHORD_TYPES).forEach(t => {
 
 // ── Shared state (read by midi.js and practice.js) ──
 let currentChordNotes = [];
-let currentOctave = 4;
 
 function updateDisplay() {
     const rootIdx = parseInt(rootSelect.value);
@@ -64,19 +63,20 @@ function updateDisplay() {
     const rootNoteAugment = Array.from(rootNoteName)[1];
     const rootFullNote  = new Note(Array.from(rootNoteName)[0], octave, rootNoteAugment || '');
 
-    // Repopulate inversion dropdown whenever note count may have changed
-    repopulateInversionSelect(chordDef.semitones.length);
+    // Repopulate inversion dropdown whenever the chord's inversion count may
+    // have changed. Extended chords offer fewer inversions than they have
+    // notes — see inversionCount().
+    repopulateInversionSelect(inversionCount(chordDef));
     const inversion = parseInt(inversionSelect.value) || 0;
 
     const rawNotes = determineNotes(rootFullNote, chordDef.intervals, chordDef.semitones);
     const notes    = applyInversion(rawNotes, inversion);
     currentChordNotes = notes;
-    currentOctave = octave;
     midiCheckMatch();
 
     const invLabel = inversion > 0 ? ` (${INVERSION_NAMES[inversion]})` : '';
     document.getElementById('chordName').textContent      = `${rootNoteName} ${type}${invLabel}`;
-    document.getElementById('chordNotesList').textContent = notes.map(n => n.name + n.augment).join(' · ');
+    document.getElementById('chordNotesList').textContent = notes.map(noteLabel).join(' · ');
     document.getElementById('infoIntervals').textContent  = chordDef.intervals;
     document.getElementById('infoFormula').textContent    = chordDef.formula;
     document.getElementById('infoQuality').textContent    = chordDef.quality;
@@ -87,20 +87,27 @@ function updateDisplay() {
     });
 
     drawStaff(staffCanvas, notes);
-    drawPiano(pianoCanvas, notes, octave, midiHeldNotes, document.getElementById('hideChordCheckbox').checked);
+    redrawPiano();
 }
 
 function resizeCanvases() {
-    const cardW  = document.querySelector('.card').clientWidth - 56;
-    const staffW = Math.max(400, Math.min(780, cardW));
+    // #mainCard specifically: with the results panel beside it, a bare '.card'
+    // lookup could pick up whichever card happens to come first.
+    const cardW  = document.getElementById('mainCard').clientWidth - 56;
+    const staffW = Math.max(STAFF_MIN_WIDTH, Math.min(780, cardW));
 
     const pianoWrapper = document.querySelector('.piano-row .piano-wrapper');
     const pianoW = pianoWrapper ? Math.max(300, pianoWrapper.clientWidth) : staffW;
 
-    staffCanvas.width  = staffW; staffCanvas.height = 400;
+    staffCanvas.width  = staffW; staffCanvas.height = 480;
     pianoCanvas.width  = pianoW; pianoCanvas.height = 120;
 
     updateDisplay();
+
+    // The results panel resizes with the grid, so its canvases follow.
+    if (practiceFocusedId !== null) {
+        renderPracticeFocus(practiceResults.find(r => r.id === practiceFocusedId));
+    }
 }
 
 rootSelect.addEventListener('change', updateDisplay);
@@ -111,13 +118,9 @@ document.getElementById('hideChordCheckbox').addEventListener('change', redrawPi
 randomBtn.addEventListener('click', () => randomizeChord());
 
 playBtn.addEventListener('click', () => {
-    const rootIdx = parseInt(rootSelect.value);
-    const octave  = parseInt(octaveSelect.value);
-    const chordDef = CHORD_TYPES[typeSelect.value];
-    const rootNoteName = ALL_ROOT_NOTES[rootIdx];
-    const rootNoteAugment = Array.from(rootNoteName)[1];
-    const rootFullNote = new Note(Array.from(rootNoteName)[0], octave, rootNoteAugment || '');
-    playChord(determineNotes(rootFullNote, chordDef.intervals, chordDef.semitones).map(n => n.midi));
+    // Play exactly what is on the staff. Re-deriving the chord here is what
+    // made Play ignore the selected inversion.
+    playChord(currentChordNotes.map(n => n.midi));
     playBtn.textContent = '♩ Playing…';
     setTimeout(() => { playBtn.textContent = '▶ Play'; }, 2800);
 });
@@ -135,7 +138,13 @@ playBtn.addEventListener('click', () => {
     });
 })();
 
-window.addEventListener('resize', resizeCanvases);
+window.addEventListener('resize', () => {
+    // Layout first, then draw: whether the results panel sits beside the staff
+    // decides how wide the main card is. A matchMedia listener alone is not
+    // enough — it does not fire in every resize path.
+    updatePracticeLayout();
+    resizeCanvases();
+});
 
 // ── Service Worker & PWA install ──────────────
 if ('serviceWorker' in navigator) {

@@ -1,0 +1,7 @@
+# Personal exported randomiser settings. The app never reads this file —
+# it is produced by "Export File" and only ever loaded via "Import JSON".
+settings.json
+doki-chord-settings.json
+
+# Local dev server config
+.claude/launch.json
