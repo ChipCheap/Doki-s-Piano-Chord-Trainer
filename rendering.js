@@ -2,21 +2,20 @@
 //  RENDERING — Staff, Piano, Clefs
 // ═══════════════════════════════════════════════
 
-// Staff position reference: bottom line of treble staff = E4
-// E4_MIDI is the absolute diatonic step used as the vertical anchor.
-const E4_MIDI = 30;
+// Narrowest the staff canvas is ever drawn at. A deep accidental stack (up to
+// four columns) plus the clef needs this much room before the noteheads would
+// run past the barline. The canvas is CSS-scaled to fit its container, so a
+// wider drawing surface costs nothing on small screens — it just renders
+// smaller rather than clipping.
+const STAFF_MIN_WIDTH = 470;
+
+// Staff position reference: bottom line of treble staff = E4.
+// E4_STEP is the diatonic step used as the vertical anchor (not a MIDI number).
+const E4_STEP = 30;
 
 function staffYFromNoteName(note, staffTop, lineSpacing) {
-    const step = note.octave * 7 + BASE_NOTES.indexOf(note.name);
     const halfSpace = lineSpacing / 2;
-    return staffTop + (4 * lineSpacing) - (step - E4_MIDI) * halfSpace;
-}
-
-// Diatonic step from a raw MIDI number — used for 2nd-collision detection.
-const DIATONIC = [0, 1, 1, 2, 2, 3, 4, 4, 5, 5, 6, 6];
-function midiToDiatonicStep(midi) {
-    const octave = Math.floor(midi / 12) - 1;
-    return octave * 7 + DIATONIC[midi % 12];
+    return staffTop + (4 * lineSpacing) - (diatonicStep(note) - E4_STEP) * halfSpace;
 }
 
 let clefShift = 0;
@@ -62,8 +61,26 @@ function drawStaff(canvas, notes) {
     const trebleNotes = notes.filter(n => n.midi >= 60).sort((a, b) => a.midi - b.midi);
     const bassNotes   = notes.filter(n => n.midi <  60).sort((a, b) => a.midi - b.midi);
 
-    drawNotesForStaff(ctx, trebleNotes, trebleTop, trebleTop, staffLeft, lineSpacing, noteRadius);
-    drawNotesForStaff(ctx, bassNotes,   bassTop,   trebleTop, staffLeft, lineSpacing, noteRadius);
+    // Accidentals are packed across both staves at once. The two staves share a
+    // continuous vertical scale, so a note just below middle C and one just
+    // above it are only a step apart on screen — packing each staff separately
+    // let those two collide.
+    const orderedNotes = [...trebleNotes, ...bassNotes];
+    const orderedY = orderedNotes.map(n => staffYFromNoteName(n, trebleTop, lineSpacing));
+    const acc = layoutAccidentals(orderedNotes, orderedY, lineSpacing);
+
+    // Both staves share one notehead origin so the chord stays vertically
+    // aligned. Adding exactly one column-width per column keeps the distance
+    // between the clef and the leftmost accidental constant however deep the
+    // stack gets.
+    const accColumnWidth = acc.columnWidth * 1.05;
+    const noteXBase = staffLeft + clefShift + 50 + acc.columnCount * accColumnWidth;
+
+    const split = trebleNotes.length;
+    drawNotesForStaff(ctx, trebleNotes, trebleTop, orderedY.slice(0, split),
+                      noteXBase, acc.columns.slice(0, split), accColumnWidth, lineSpacing, noteRadius);
+    drawNotesForStaff(ctx, bassNotes, bassTop, orderedY.slice(split),
+                      noteXBase, acc.columns.slice(split), accColumnWidth, lineSpacing, noteRadius);
 
     // Bar lines spanning both staves
     ctx.strokeStyle = '#1a1410';
@@ -79,55 +96,85 @@ function drawStaff(canvas, notes) {
     ctx.stroke();
 }
 
-function drawNotesForStaff(ctx, staffNotes, staffTop, trebleTop, staffLeft, lineSpacing, noteRadius) {
+// ── Accidental layout ─────────────────────────
+const ACCIDENTAL_IMAGES = {'#': 'sharp', 'b': 'flat', 'x': 'doubleSharp', 'V': 'doubleFlat'};
+
+function accidentalSize(note, lineSpacing) {
+    const key = ACCIDENTAL_IMAGES[note.augment];
+    if (!key) return null;
+    const img = {sharp: sharpImg, flat: flatImg, doubleSharp: doubleSharpImg, doubleFlat: doubleFlatImg}[key];
+    if (!img || !img.naturalWidth) return null;
+    const h = lineSpacing * 2.0;
+    return { img, h, w: h * (img.naturalWidth / img.naturalHeight) };
+}
+
+// Accidentals stack in their own columns to the left of the chord. Working from
+// the top down, each one takes the first column — nearest the noteheads —  where
+// its glyph box does not vertically overlap an accidental already sitting there.
+// This is the standard engraving rule. The heuristic it replaces only looked at
+// runs of seconds and moved a single accidental per run, so stacked thirds (a
+// diminished 7th, say) piled every glyph into one column.
+function layoutAccidentals(staffNotes, ys, lineSpacing) {
+    const columns = new Array(staffNotes.length).fill(-1);
+    const occupied = [];            // per column: the boxes already placed
+    let columnWidth = lineSpacing;  // floor, so a chord with no accidentals still has a sane width
+
+    const topDown = staffNotes
+        .map((note, i) => i)
+        .filter(i => accidentalSize(staffNotes[i], lineSpacing))
+        .sort((a, b) => ys[a] - ys[b]);
+
+    for (const i of topDown) {
+        const size = accidentalSize(staffNotes[i], lineSpacing);
+        columnWidth = Math.max(columnWidth, size.w);
+        // The glyph hangs two thirds above its note's line and one third below.
+        const top = ys[i] - size.h * 2 / 3;
+        const bottom = top + size.h;
+
+        let c = 0;
+        while (occupied[c] && occupied[c].some(b => top < b.bottom && b.top < bottom)) c++;
+        (occupied[c] = occupied[c] || []).push({ top, bottom });
+        columns[i] = c;
+    }
+
+    return { columns, columnCount: occupied.length, columnWidth };
+}
+
+function drawNotesForStaff(ctx, staffNotes, staffTop, ys, noteXBase, accColumns, accColumnWidth, lineSpacing, noteRadius) {
     if (staffNotes.length === 0) return;
     const n = staffNotes.length;
 
-    // X offsets for 2nd collisions
+    // X offsets for 2nd collisions. Comparing diatonic steps rather than
+    // BASE_NOTES indices is what makes B->C read as a second instead of a 6th.
+    // Within a run of seconds the offset alternates left/right/left; marching
+    // further right with each note drifts the whole cluster off its column.
     const noteOffset = noteRadius * 2.2;
     const xShifts = new Array(n).fill(0);
-    for (let i = 0; i < n - 1; i++) {
-        if (Math.abs(BASE_NOTES.indexOf(staffNotes[i].name) - BASE_NOTES.indexOf(staffNotes[i + 1].name)) === 1) {
-            xShifts[i + 1] = xShifts[i] + noteOffset;
-        }
-    }
-
-    // Accidental X offsets
-    const accXShifts = new Array(n).fill(0);
-    const accidentalWidth = lineSpacing;
     for (let i = 0; i < n; i++) {
-        if (!staffNotes[i].augment) continue;
         let runEnd = i;
-        while (
-            runEnd + 1 < n &&
-            staffNotes[runEnd + 1].augment &&
-            Math.abs(midiToDiatonicStep(staffNotes[runEnd + 1].midi) - midiToDiatonicStep(staffNotes[runEnd].midi)) === 1
-        ) { runEnd++; }
-        const runLen = runEnd - i + 1;
-        if (runLen === 2)     accXShifts[i] = -accidentalWidth;
-        else if (runLen >= 3) accXShifts[i + Math.floor((runLen - 1) / 2)] = -accidentalWidth;
+        while (runEnd + 1 < n &&
+               Math.abs(diatonicStep(staffNotes[runEnd + 1]) - diatonicStep(staffNotes[runEnd])) === 1) {
+            runEnd++;
+        }
+        for (let j = i; j <= runEnd; j++) xShifts[j] = ((j - i) % 2) * noteOffset;
         i = runEnd;
     }
-    for (let i = 0; i < n; i++) {
-        if (staffNotes[i].augment && xShifts[i] > 0) accXShifts[i] -= xShifts[i];
-    }
-
-    const noteXBase = staffLeft + clefShift + 50;
 
     staffNotes.forEach((note, idx) => {
         const noteX = noteXBase + xShifts[idx];
-        const y = staffYFromNoteName(note, trebleTop, lineSpacing);
+        const y = ys[idx];
 
-        drawLedgerLines(ctx, note.midi, noteX, staffTop, lineSpacing, noteRadius, y);
+        drawLedgerLines(ctx, noteX, staffTop, lineSpacing, noteRadius, y);
 
-        if (note.augment && imagesReady) {
-            const imgMap = {'#': sharpImg, 'b': flatImg, 'x': doubleSharpImg, 'V': doubleFlatImg};
-            const img = imgMap[note.augment];
-            if (img && img.naturalWidth > 0) {
-                const imgH = lineSpacing * 2.0;
-                const imgW = imgH * (img.naturalWidth / img.naturalHeight);
-                const accX = noteX + accXShifts[idx] - noteRadius - 2;
-                ctx.drawImage(img, accX - imgW, y - imgH * 2 / 3, imgW, imgH);
+        // Accidentals hang off noteXBase, not noteX: they form columns to the
+        // left of the chord as a whole and must not follow a notehead that was
+        // pushed right to resolve a second.
+        const col = accColumns[idx];
+        if (col >= 0) {
+            const size = accidentalSize(note, lineSpacing);
+            if (size) {
+                const right = noteXBase - noteRadius - 2 - col * accColumnWidth;
+                ctx.drawImage(size.img, right - size.w, y - size.h * 2 / 3, size.w, size.h);
             }
         }
 
@@ -142,51 +189,53 @@ function drawNotesForStaff(ctx, staffNotes, staffTop, trebleTop, staffLeft, line
     });
 }
 
-function drawLedgerLines(ctx, midi, noteX, staffTop, lineSpacing, noteRadius, y) {
+function drawLedgerLines(ctx, noteX, staffTop, lineSpacing, noteRadius, y) {
     ctx.strokeStyle = '#1a1410';
     ctx.lineWidth = 1.5;
-    const halfSpace = lineSpacing / 2;
-    const bottomLineY = staffTop + 4 * lineSpacing;
-    const topLineY = staffTop;
+    const eps = 0.5;
 
-    if (y > bottomLineY + halfSpace) {
-        let ly = bottomLineY + lineSpacing;
-        while (ly <= y + halfSpace) {
-            if (Math.abs(y - ly) < halfSpace + 1) {
-                ctx.beginPath();
-                ctx.moveTo(noteX - noteRadius * 1.8, ly);
-                ctx.lineTo(noteX + noteRadius * 1.8, ly);
-                ctx.stroke();
-            }
-            ly += lineSpacing;
-        }
-    }
-    if (y < topLineY - halfSpace) {
-        let ly = topLineY - lineSpacing;
-        while (ly >= y - halfSpace) {
-            if (Math.abs(y - ly) < halfSpace + 1) {
-                ctx.beginPath();
-                ctx.moveTo(noteX - noteRadius * 1.8, ly);
-                ctx.lineTo(noteX + noteRadius * 1.8, ly);
-                ctx.stroke();
-            }
-            ly -= lineSpacing;
-        }
-    }
+    const draw = ly => {
+        ctx.beginPath();
+        ctx.moveTo(noteX - noteRadius * 1.8, ly);
+        ctx.lineTo(noteX + noteRadius * 1.8, ly);
+        ctx.stroke();
+    };
+
+    // Every ledger position from just outside the staff up to the note. A note
+    // sitting on a line gets its own line; one in a space stops at the last
+    // line before it. Skipping the intermediate lines leaves a note floating
+    // with no way to count its position.
+    for (let ly = staffTop + 5 * lineSpacing; ly <= y + eps; ly += lineSpacing) draw(ly);
+    for (let ly = staffTop - lineSpacing;     ly >= y - eps; ly -= lineSpacing) draw(ly);
 }
 
 // ── Piano drawing ─────────────────────────────
-function drawPiano(canvas, notes, octave, heldMidi = new Set(), hideChord = false) {
+// heldMidi = notes currently played. expandTo = extra MIDI numbers the window
+// must cover; the live keyboard passes none, because rescaling mid-performance
+// destroys the spatial reference you play by. The results view passes the held
+// notes, so a stray note well outside the chord is still visible on review.
+function drawPiano(canvas, notes, heldMidi = new Set(), hideChord = false, expandTo = null) {
     const ctx = canvas.getContext('2d');
     const W = canvas.width, H = canvas.height;
     ctx.clearRect(0, 0, W, H);
 
-    const startOctave = Math.max(0, octave - 1);
-    const numOctaves  = 3;
     const whitePC  = [0, 2, 4, 5, 7, 9, 11];
     const blackPC  = [1, 3, 6, 8, 10];
     const blackOffset = {1: 0.67, 3: 1.67, 6: 3.67, 8: 4.67, 10: 5.67};
     const chordMidiSet = new Set(notes.map(n => n.midi));
+
+    // Anchor the window on the chord itself. The octave dropdown only names the
+    // root, and a wide voicing reaches well past it.
+    const spread = notes.map(n => n.midi);
+    if (expandTo) for (const m of expandTo) spread.push(m);
+    const lowest  = spread.length ? Math.min(...spread) : 60;
+    const highest = spread.length ? Math.max(...spread) : 60;
+
+    const startOctave = Math.max(0, Math.floor(lowest / 12) - 1);
+    // Three octaves cover any single chord (the widest spans 21 semitones);
+    // only stray played notes passed via expandTo can force it wider.
+    const numOctaves = Math.min(5, Math.max(3,
+        Math.ceil((highest - (startOctave + 1) * 12) / 12)));
 
     const whites = [];
     let totalWhites = 0;
@@ -202,54 +251,66 @@ function drawPiano(canvas, notes, octave, heldMidi = new Set(), hideChord = fals
     const bKeyH    = wKeyH * 0.6;
     const bKeyOffset = (wKeyW - bKeyW) / 2;
 
-    function keyColor(midi, isBlack) {
-        if (heldMidi.has(midi))                       return '#1a3a8b'; // held → blue
-        if (!hideChord && chordMidiSet.has(midi))     return '#8b1a1a'; // target → red
-        return isBlack ? '#1a1410' : '#f8f3ea';
+    // Three states, resolved explicitly: a held target note is 'correct' and
+    // must not fall through to a plain 'held' colour, which is what made a
+    // right answer and a wrong extra note look identical.
+    // While the target is hidden, 'wrong' is suppressed — telling you a note is
+    // wrong would give the answer away.
+    function keyState(midi) {
+        const held   = heldMidi.has(midi);
+        const target = chordMidiSet.has(midi);
+        if (hideChord)      return held ? 'correct' : 'idle';
+        if (held && target) return 'correct';
+        if (target)         return 'missed';
+        if (held)           return 'wrong';
+        return 'idle';
     }
 
-    // White keys
-    whites.forEach(({midi, index}) => {
-        const x = margin + index * wKeyW;
-        const isActive = heldMidi.has(midi) || (!hideChord && chordMidiSet.has(midi));
+    const STATE_FILL = {correct: '#1a3a8b', missed: '#8b1a1a', wrong: '#8a6d1f'};
+
+    function paintKey(midi, x, y, w, h, isBlack) {
+        const state = keyState(midi);
         ctx.beginPath();
-        ctx.roundRect(x + 1, 10, wKeyW - 2, wKeyH, [0, 0, 3, 3]);
-        ctx.fillStyle = keyColor(midi, false);
+        ctx.roundRect(x, y, w, h, [0, 0, 3, 3]);
+        ctx.fillStyle = STATE_FILL[state] || (isBlack ? '#1a1410' : '#f8f3ea');
         ctx.fill();
-        ctx.strokeStyle = '#c8a96e';
-        ctx.lineWidth = 0.8;
-        ctx.stroke();
-        if (isActive) {
-            ctx.fillStyle = 'rgba(255,255,255,0.25)';
+        // Shape as well as hue, so the three states stay separable without
+        // relying on colour: held keys carry a highlight bar, and a wrong one
+        // additionally gets a dark ring.
+        if (state === 'wrong') {
+            ctx.strokeStyle = '#4a3a08';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        } else if (!isBlack) {
+            ctx.strokeStyle = '#c8a96e';
+            ctx.lineWidth = 0.8;
+            ctx.stroke();
+        }
+        if (state === 'correct' || state === 'wrong') {
+            ctx.fillStyle = isBlack ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.25)';
             ctx.beginPath();
-            ctx.roundRect(x + 3, 12, wKeyW - 6, 20, 2);
+            ctx.roundRect(x + 2, y + 2, w - 4, isBlack ? 14 : 20, 2);
             ctx.fill();
         }
+        return state;
+    }
+
+    whites.forEach(({midi, index}) => {
+        const x = margin + index * wKeyW;
+        const state = paintKey(midi, x + 1, 10, wKeyW - 2, wKeyH, false);
         if (wKeyW > 16 && midi % 12 === 0) {
-            ctx.fillStyle = isActive ? '#f5f0e8' : '#7a6040';
+            ctx.fillStyle = state === 'idle' ? '#7a6040' : '#f5f0e8';
             ctx.font = `${Math.min(10, wKeyW * 0.55)}px 'Source Code Pro', monospace`;
             ctx.textAlign = 'center';
             ctx.fillText('C' + (Math.floor(midi / 12) - 1), x + wKeyW / 2, 10 + wKeyH - 6);
         }
     });
 
-    // Black keys
     for (let oct = startOctave; oct < startOctave + numOctaves; oct++) {
         const octStart = oct - startOctave;
         blackPC.forEach(pc => {
             const xPos = margin + (octStart * 7 + blackOffset[pc]) * wKeyW - bKeyOffset;
-            const midi = (oct + 1) * 12 + pc;
-            const isActive = heldMidi.has(midi) || (!hideChord && chordMidiSet.has(midi));
-            ctx.beginPath();
-            ctx.roundRect(xPos, 10, bKeyW, bKeyH, [0, 0, 3, 3]);
-            ctx.fillStyle = keyColor(midi, true);
-            ctx.fill();
-            if (isActive) {
-                ctx.fillStyle = 'rgba(255,255,255,0.18)';
-                ctx.beginPath();
-                ctx.roundRect(xPos + 2, 12, bKeyW - 4, 14, 2);
-                ctx.fill();
-            }
+            paintKey((oct + 1) * 12 + pc, xPos, 10, bKeyW, bKeyH, true);
         });
     }
 }

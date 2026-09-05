@@ -608,6 +608,39 @@
     /* Hide the native file input inside the import label */
     .sp-file-input { display: none; }
 
+    /* Export is a sibling of Save, styled like Import so the destructive-ish
+       "writes a file to your disk" action doesn't read as the primary one. */
+    .sp-export-btn {
+      font-family: 'IM Fell English', serif;
+      font-size: 0.9rem;
+      padding: 7px 18px;
+      background: var(--paper-dark);
+      color: var(--ink);
+      border: 1.5px solid #c8a96e;
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .sp-export-btn:hover { border-color: var(--red-accent); }
+
+    /* ── EMPTY-SELECTION NOTICES ── */
+    .sp-empty-warning,
+    .random-warning {
+      font-family: 'IM Fell English', serif;
+      font-size: 0.85rem;
+      line-height: 1.45;
+      color: #7a3020;
+      background: #f6e6df;
+      border: 1px solid rgba(139,26,26,0.35);
+      border-radius: var(--radius);
+      padding: 9px 14px;
+      margin: 0;
+    }
+    .sp-empty-warning { margin: 0 24px 4px; }
+    .random-warning   { margin-top: 14px; }
+    .sp-empty-warning[hidden],
+    .random-warning[hidden] { display: none; }
+
     /* ── PRACTICE SESSION BUTTON ── */
     .btn-practice {
       background: var(--paper-dark);
@@ -656,37 +689,117 @@
     }
     .practice-clear-btn:hover { border-color: var(--red-accent); color: var(--red-accent); }
 
-    /* ── PRACTICE THUMBNAIL GRID ── */
+    /* ── PRACTICE THUMBNAIL STRIP ── */
+    /* nowrap + overflow-x is the whole point: results stay on one line and
+       scroll sideways instead of growing a second row and pushing the focused
+       view off screen. flex-shrink:0 on the thumb is what stops flex from
+       squeezing twenty of them into the visible width. */
     .practice-results-list {
       display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
+      min-width: 0;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scroll-snap-type: x proximity;
+      gap: 10px;
+      padding-bottom: 8px;
     }
     .practice-thumb {
+      flex: 0 0 auto;
+      width: 150px;
+      scroll-snap-align: start;
+      cursor: pointer;
+      text-align: left;
+      font: inherit;
       background: var(--paper-dark);
       border: 1px solid rgba(200,169,110,0.4);
       border-radius: var(--radius);
-      padding: 8px 10px 10px;
-      width: 180px;
-      flex-shrink: 0;
+      padding: 7px 8px 8px;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .practice-thumb:hover { border-color: var(--sepia); }
+    .practice-thumb.focused {
+      border-color: var(--red-accent);
+      background: #f0e6d8;
+      box-shadow: inset 0 0 0 1px rgba(139,26,26,0.35);
+    }
+    .practice-thumb-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 6px;
+      margin-bottom: 5px;
     }
     .practice-thumb-name {
       font-family: 'Playfair Display', serif;
-      font-size: 0.82rem;
+      font-size: 0.72rem;
       font-weight: 700;
       color: var(--ink);
-      text-align: center;
-      margin-bottom: 6px;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
+    .practice-thumb-badge { font-size: 0.8rem; font-weight: 700; flex-shrink: 0; }
+    .practice-thumb-badge.ok  { color: #2f6b3f; }
+    .practice-thumb-badge.bad { color: var(--red-accent); }
     .practice-thumb-canvas {
       display: block;
       width: 100%;
-      height: 60px;
+      height: auto;
       border-radius: 3px;
     }
+
+    /* ── PRACTICE FOCUSED VIEW ── */
+    .practice-focus {
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid rgba(200,169,110,0.35);
+      min-height: 200px;   /* reserve the box so the grid doesn't jump when the
+                              first result lands */
+    }
+    .practice-focus-empty {
+      font-size: 0.85rem;
+      color: #9a7040;
+      font-style: italic;
+      margin: 0;
+    }
+    .practice-focus-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+    .practice-focus-name {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--ink);
+    }
+    .practice-focus-verdict { font-size: 0.85rem; font-weight: 600; }
+    .practice-focus-verdict.ok  { color: #2f6b3f; }
+    .practice-focus-verdict.bad { color: var(--red-accent); }
+    .practice-focus-canvas-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .practice-focus-canvas-wrap canvas {
+      display: block;
+      margin: 0 auto;
+      max-width: 100%;
+      height: auto;
+    }
+
+    .practice-layout-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-left: auto;
+      margin-right: 10px;
+      font-size: 0.78rem;
+      color: #7a6040;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .practice-layout-label input { cursor: pointer; }
 
     /* ── COLLAPSIBLE SECTION ── */
     .collapsible-section {
@@ -753,4 +866,41 @@
       accent-color: var(--red-accent);
       width: 13px; height: 13px;
       cursor: pointer;
+    }
+
+    /* ── APP PANES ── */
+    /* Stacked by default: main card, results, MIDI panel, in DOM order. When
+       there is room and the user hasn't opted out, the results move into a
+       second column beside the staff — one axis change, not a second design. */
+    .app-panes {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 20px;
+      width: calc(100% - 32px);
+      max-width: 860px;
+      margin: 20px auto 32px;
+    }
+    .app-panes > .card {
+      width: auto;
+      max-width: none;
+      margin: 0;
+      /* Grid items default to min-width:auto, which lets the card grow to fit
+         the whole thumbnail strip and pushes the page into horizontal scroll.
+         min-width:0 is what lets the strip scroll inside the card instead. */
+      min-width: 0;
+    }
+    .app-panes.side-by-side {
+      max-width: 1560px;
+      grid-template-columns: minmax(0, 860px) minmax(400px, 1fr);
+      grid-template-areas:
+        "main    results"
+        "midi    results";
+      align-items: start;
+    }
+    .app-panes.side-by-side > #mainCard        { grid-area: main; }
+    .app-panes.side-by-side > #practiceResults { grid-area: results; }
+    .app-panes.side-by-side > .midi-card       { grid-area: midi; }
+
+    @media (max-width: 620px) {
+      .practice-layout-label { display: none; }
     }

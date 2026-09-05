@@ -98,9 +98,39 @@ const INVERSION_NAMES = [
 function applyInversion(notes, n) {
     const result = [...notes];
     for (let i = 0; i < n; i++) {
-        const moved = new Note(result[0].name, result[0].octave + 1, result[0].augment);
-        result.push(moved);
-        result.shift();
+        // Lift the genuinely lowest note, not just the array head. Within
+        // inversionCount() they are always the same note, but relying on
+        // position alone breaks silently if that cap ever widens.
+        let lowest = 0;
+        for (let j = 1; j < result.length; j++) {
+            if (result[j].midi < result[lowest].midi) lowest = j;
+        }
+        const src = result[lowest];
+        result.splice(lowest, 1);
+        result.push(new Note(src.name, src.octave + 1, src.augment));
     }
     return result;
+}
+
+// How many inversions a chord actually has. Standard harmony names inversions
+// by which chord tone is in the bass and stops at the third (seventh in the
+// bass): the 9th, 11th and 13th are upper-structure tones, and a voicing with
+// one of them in the bass reads as a different chord rather than an inversion.
+// A tone can take the bass only if it lies within an octave of the root.
+function inversionCount(chordDef) {
+    return chordDef.semitones.filter(s => s < 12).length;
+}
+
+// ── Display helpers ───────────────────────────
+// Diatonic staff position: one step per line/space, accidentals ignored. Read
+// from the spelling rather than the MIDI number, so B#4 and Cb4 sit on the B
+// and C positions instead of on their enharmonic neighbours.
+function diatonicStep(note) {
+    return note.octave * 7 + BASE_NOTES.indexOf(note.name);
+}
+
+// 'V' is the internal double-flat code. 'x' is already the conventional text
+// shorthand for a double sharp, so it passes through unchanged.
+function noteLabel(note) {
+    return note.name + (note.augment === 'V' ? 'bb' : note.augment);
 }

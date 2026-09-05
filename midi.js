@@ -82,6 +82,20 @@ function midiPanic() {
     midiCheckMatch();
 }
 
+// The single definition of "did they play it right", shared by the live
+// readout and the practice results so the two cannot disagree.
+function compareChord(chordNotes, heldMidi) {
+    const chordMidis = new Set(chordNotes.map(n => n.midi));
+    const missing = chordNotes.filter(n => !heldMidi.has(n.midi));
+    const extra   = [...heldMidi].filter(m => !chordMidis.has(m));
+    return {missing, extra, correct: missing.length === 0 && extra.length === 0};
+}
+
+// Name for a bare MIDI number, where no spelling is known.
+function midiNoteName(midi) {
+    return NOTE_NAMES_FLAT[midi % 12] + (Math.floor(midi / 12) - 1);
+}
+
 function midiCheckMatch() {
     const resultEl = document.getElementById('midiResult');
     if (midiHeldNotes.size === 0) {
@@ -91,20 +105,17 @@ function midiCheckMatch() {
     }
     if (currentChordNotes.length === 0) return;
 
-    const chordMidis  = new Set(currentChordNotes.map(n => n.midi));
-    const missingNotes = currentChordNotes.filter(n => !midiHeldNotes.has(n.midi));
-    const extraMidi    = [...midiHeldNotes].filter(n => !chordMidis.has(n));
-    const extraNames   = extraMidi.map(n => NOTE_NAMES_FLAT[n % 12] + (Math.floor(n / 12) - 1));
+    const {missing, extra, correct} = compareChord(currentChordNotes, midiHeldNotes);
 
-    if (missingNotes.length === 0 && extraNames.length === 0) {
+    if (correct) {
         resultEl.className = 'midi-result correct';
         resultEl.textContent = '✓ Correct!';
-    } else if (missingNotes.length === 0) {
+    } else if (missing.length === 0) {
         resultEl.className = 'midi-result extra';
-        resultEl.textContent = '✓ All chord tones + ' + extraNames.join(', ') + ' extra';
+        resultEl.textContent = '✓ All chord tones + ' + extra.map(midiNoteName).join(', ') + ' extra';
     } else {
         resultEl.className = 'midi-result wrong';
-        resultEl.textContent = '✗ Missing: ' + missingNotes.map(n => n.name + n.augment + n.octave).join(', ');
+        resultEl.textContent = '✗ Missing: ' + missing.map(n => noteLabel(n) + n.octave).join(', ');
     }
 }
 
@@ -127,7 +138,7 @@ function midiSetStatus(state) {
 
 function redrawPiano() {
     const hideChord = document.getElementById('hideChordCheckbox').checked;
-    drawPiano(pianoCanvas, currentChordNotes, currentOctave, midiHeldNotes, hideChord);
+    drawPiano(pianoCanvas, currentChordNotes, midiHeldNotes, hideChord);
 }
 
 initMidi();
