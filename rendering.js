@@ -76,11 +76,17 @@ function drawStaff(canvas, notes) {
     const accColumnWidth = acc.columnWidth * 1.05;
     const noteXBase = staffLeft + clefShift + 50 + acc.columnCount * accColumnWidth;
 
+    // Notehead offsets are computed across both staves for the same reason as
+    // the accidentals: a second can straddle the seam — B3 sits in the bass
+    // group and C4 in the treble, and packing each staff alone meant those two
+    // never met, so they were drawn on top of each other.
+    const xShifts = layoutSecondOffsets(orderedNotes, noteRadius * 2.2);
+
     const split = trebleNotes.length;
-    drawNotesForStaff(ctx, trebleNotes, trebleTop, orderedY.slice(0, split),
-                      noteXBase, acc.columns.slice(0, split), accColumnWidth, lineSpacing, noteRadius);
-    drawNotesForStaff(ctx, bassNotes, bassTop, orderedY.slice(split),
-                      noteXBase, acc.columns.slice(split), accColumnWidth, lineSpacing, noteRadius);
+    drawNotesForStaff(ctx, trebleNotes, trebleTop, orderedY.slice(0, split), noteXBase,
+                      xShifts.slice(0, split), acc.columns.slice(0, split), accColumnWidth, lineSpacing, noteRadius);
+    drawNotesForStaff(ctx, bassNotes, bassTop, orderedY.slice(split), noteXBase,
+                      xShifts.slice(split), acc.columns.slice(split), accColumnWidth, lineSpacing, noteRadius);
 
     // Bar lines spanning both staves
     ctx.strokeStyle = '#1a1410';
@@ -140,25 +146,29 @@ function layoutAccidentals(staffNotes, ys, lineSpacing) {
     return { columns, columnCount: occupied.length, columnWidth };
 }
 
-function drawNotesForStaff(ctx, staffNotes, staffTop, ys, noteXBase, accColumns, accColumnWidth, lineSpacing, noteRadius) {
-    if (staffNotes.length === 0) return;
-    const n = staffNotes.length;
+// Notes a diatonic step apart cannot share a column. Comparing diatonic steps
+// rather than BASE_NOTES indices is what makes B->C read as a second instead of
+// a 6th, and within a run the offset alternates left/right/left — marching
+// further right with each note drifts the whole cluster off its column.
+function layoutSecondOffsets(notes, noteOffset) {
+    const shifts = new Array(notes.length).fill(0);
+    const byPitch = notes.map((n, i) => i)
+        .sort((a, b) => diatonicStep(notes[a]) - diatonicStep(notes[b]));
 
-    // X offsets for 2nd collisions. Comparing diatonic steps rather than
-    // BASE_NOTES indices is what makes B->C read as a second instead of a 6th.
-    // Within a run of seconds the offset alternates left/right/left; marching
-    // further right with each note drifts the whole cluster off its column.
-    const noteOffset = noteRadius * 2.2;
-    const xShifts = new Array(n).fill(0);
-    for (let i = 0; i < n; i++) {
+    for (let i = 0; i < byPitch.length; i++) {
         let runEnd = i;
-        while (runEnd + 1 < n &&
-               Math.abs(diatonicStep(staffNotes[runEnd + 1]) - diatonicStep(staffNotes[runEnd])) === 1) {
+        while (runEnd + 1 < byPitch.length &&
+               diatonicStep(notes[byPitch[runEnd + 1]]) - diatonicStep(notes[byPitch[runEnd]]) === 1) {
             runEnd++;
         }
-        for (let j = i; j <= runEnd; j++) xShifts[j] = ((j - i) % 2) * noteOffset;
+        for (let j = i; j <= runEnd; j++) shifts[byPitch[j]] = ((j - i) % 2) * noteOffset;
         i = runEnd;
     }
+    return shifts;
+}
+
+function drawNotesForStaff(ctx, staffNotes, staffTop, ys, noteXBase, xShifts, accColumns, accColumnWidth, lineSpacing, noteRadius) {
+    if (staffNotes.length === 0) return;
 
     staffNotes.forEach((note, idx) => {
         const noteX = noteXBase + xShifts[idx];
