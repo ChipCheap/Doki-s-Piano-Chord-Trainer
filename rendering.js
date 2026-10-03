@@ -33,6 +33,11 @@ function drawStaff(canvas, notes) {
 
     const trebleTop = H / 2 - 5 * lineSpacing;
     const bassTop   = trebleTop + 6 * lineSpacing;
+    // Halfway between the staves, which lands exactly on middle C's line. A
+    // note at or above it takes its ledger lines from the treble staff, below
+    // it from the bass. This is the only thing the clef a note "belongs to"
+    // still decides.
+    const ledgerSplitY = trebleTop + 5 * lineSpacing;
 
     ctx.strokeStyle = '#2a2018';
     ctx.lineWidth = 1.5;
@@ -58,35 +63,26 @@ function drawStaff(canvas, notes) {
     drawClef(ctx, staffLeft, trebleTop, lineSpacing, trebleImg);
     drawClef(ctx, staffLeft, bassTop,   lineSpacing, bassImg);
 
-    const trebleNotes = notes.filter(n => n.midi >= 60).sort((a, b) => a.midi - b.midi);
-    const bassNotes   = notes.filter(n => n.midi <  60).sort((a, b) => a.midi - b.midi);
+    // One grand staff, one list of notes. The staves are drawn as two boxes but
+    // share a single continuous vertical scale, so every layout decision — y,
+    // accidental columns, notehead offsets — has to see the whole chord at
+    // once. Splitting the notes by clef and laying each half out on its own is
+    // what produced collisions at the seam between them.
+    const chord   = [...notes].sort((a, b) => diatonicStep(a) - diatonicStep(b));
+    const ys      = chord.map(n => staffYFromNoteName(n, trebleTop, lineSpacing));
+    const acc     = layoutAccidentals(chord, ys, lineSpacing);
+    const xShifts = layoutSecondOffsets(chord, noteRadius * 2.2);
 
-    // Accidentals are packed across both staves at once. The two staves share a
-    // continuous vertical scale, so a note just below middle C and one just
-    // above it are only a step apart on screen — packing each staff separately
-    // let those two collide.
-    const orderedNotes = [...trebleNotes, ...bassNotes];
-    const orderedY = orderedNotes.map(n => staffYFromNoteName(n, trebleTop, lineSpacing));
-    const acc = layoutAccidentals(orderedNotes, orderedY, lineSpacing);
-
-    // Both staves share one notehead origin so the chord stays vertically
-    // aligned. Adding exactly one column-width per column keeps the distance
+    // Adding exactly one column-width per accidental column keeps the distance
     // between the clef and the leftmost accidental constant however deep the
     // stack gets.
     const accColumnWidth = acc.columnWidth * 1.05;
     const noteXBase = staffLeft + clefShift + 50 + acc.columnCount * accColumnWidth;
 
-    // Notehead offsets are computed across both staves for the same reason as
-    // the accidentals: a second can straddle the seam — B3 sits in the bass
-    // group and C4 in the treble, and packing each staff alone meant those two
-    // never met, so they were drawn on top of each other.
-    const xShifts = layoutSecondOffsets(orderedNotes, noteRadius * 2.2);
-
-    const split = trebleNotes.length;
-    drawNotesForStaff(ctx, trebleNotes, trebleTop, orderedY.slice(0, split), noteXBase,
-                      xShifts.slice(0, split), acc.columns.slice(0, split), accColumnWidth, lineSpacing, noteRadius);
-    drawNotesForStaff(ctx, bassNotes, bassTop, orderedY.slice(split), noteXBase,
-                      xShifts.slice(split), acc.columns.slice(split), accColumnWidth, lineSpacing, noteRadius);
+    drawChordNotes(ctx, chord, ys, xShifts, acc.columns, {
+        noteXBase, accColumnWidth, lineSpacing, noteRadius,
+        trebleTop, bassTop, ledgerSplitY
+    });
 
     // Bar lines spanning both staves
     ctx.strokeStyle = '#1a1410';
@@ -167,14 +163,20 @@ function layoutSecondOffsets(notes, noteOffset) {
     return shifts;
 }
 
-function drawNotesForStaff(ctx, staffNotes, staffTop, ys, noteXBase, xShifts, accColumns, accColumnWidth, lineSpacing, noteRadius) {
-    if (staffNotes.length === 0) return;
+function drawChordNotes(ctx, chord, ys, xShifts, accColumns, opts) {
+    const { noteXBase, accColumnWidth, lineSpacing, noteRadius,
+            trebleTop, bassTop, ledgerSplitY } = opts;
 
-    staffNotes.forEach((note, idx) => {
+    chord.forEach((note, idx) => {
         const noteX = noteXBase + xShifts[idx];
         const y = ys[idx];
 
-        drawLedgerLines(ctx, noteX, staffTop, lineSpacing, noteRadius, y);
+        // Ledger lines grow from whichever staff the note sits nearer. Deciding
+        // that from position rather than MIDI number also puts enharmonics on
+        // the correct side: B#3 is written on the B line below middle C even
+        // though its MIDI number is 60.
+        drawLedgerLines(ctx, noteX, y <= ledgerSplitY ? trebleTop : bassTop,
+                        lineSpacing, noteRadius, y);
 
         // Accidentals hang off noteXBase, not noteX: they form columns to the
         // left of the chord as a whole and must not follow a notehead that was
