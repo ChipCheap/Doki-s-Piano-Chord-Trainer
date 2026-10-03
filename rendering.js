@@ -33,6 +33,11 @@ function drawStaff(canvas, notes) {
 
     const trebleTop = H / 2 - 5 * lineSpacing;
     const bassTop   = trebleTop + 6 * lineSpacing;
+    // Halfway between the staves, which lands exactly on middle C's line. A
+    // note at or above it takes its ledger lines from the treble staff, below
+    // it from the bass. This is the only thing the clef a note "belongs to"
+    // still decides.
+    const ledgerSplitY = trebleTop + 5 * lineSpacing;
 
     ctx.strokeStyle = '#2a2018';
     ctx.lineWidth = 1.5;
@@ -58,29 +63,26 @@ function drawStaff(canvas, notes) {
     drawClef(ctx, staffLeft, trebleTop, lineSpacing, trebleImg);
     drawClef(ctx, staffLeft, bassTop,   lineSpacing, bassImg);
 
-    const trebleNotes = notes.filter(n => n.midi >= 60).sort((a, b) => a.midi - b.midi);
-    const bassNotes   = notes.filter(n => n.midi <  60).sort((a, b) => a.midi - b.midi);
+    // One grand staff, one list of notes. The staves are drawn as two boxes but
+    // share a single continuous vertical scale, so every layout decision — y,
+    // accidental columns, notehead offsets — has to see the whole chord at
+    // once. Splitting the notes by clef and laying each half out on its own is
+    // what produced collisions at the seam between them.
+    const chord   = [...notes].sort((a, b) => diatonicStep(a) - diatonicStep(b));
+    const ys      = chord.map(n => staffYFromNoteName(n, trebleTop, lineSpacing));
+    const acc     = layoutAccidentals(chord, ys, lineSpacing);
+    const xShifts = layoutSecondOffsets(chord, noteRadius * 2.2);
 
-    // Accidentals are packed across both staves at once. The two staves share a
-    // continuous vertical scale, so a note just below middle C and one just
-    // above it are only a step apart on screen — packing each staff separately
-    // let those two collide.
-    const orderedNotes = [...trebleNotes, ...bassNotes];
-    const orderedY = orderedNotes.map(n => staffYFromNoteName(n, trebleTop, lineSpacing));
-    const acc = layoutAccidentals(orderedNotes, orderedY, lineSpacing);
-
-    // Both staves share one notehead origin so the chord stays vertically
-    // aligned. Adding exactly one column-width per column keeps the distance
+    // Adding exactly one column-width per accidental column keeps the distance
     // between the clef and the leftmost accidental constant however deep the
     // stack gets.
     const accColumnWidth = acc.columnWidth * 1.05;
     const noteXBase = staffLeft + clefShift + 50 + acc.columnCount * accColumnWidth;
 
-    const split = trebleNotes.length;
-    drawNotesForStaff(ctx, trebleNotes, trebleTop, orderedY.slice(0, split),
-                      noteXBase, acc.columns.slice(0, split), accColumnWidth, lineSpacing, noteRadius);
-    drawNotesForStaff(ctx, bassNotes, bassTop, orderedY.slice(split),
-                      noteXBase, acc.columns.slice(split), accColumnWidth, lineSpacing, noteRadius);
+    drawChordNotes(ctx, chord, ys, xShifts, acc.columns, {
+        noteXBase, accColumnWidth, lineSpacing, noteRadius,
+        trebleTop, bassTop, ledgerSplitY
+    });
 
     // Bar lines spanning both staves
     ctx.strokeStyle = '#1a1410';
@@ -140,31 +142,41 @@ function layoutAccidentals(staffNotes, ys, lineSpacing) {
     return { columns, columnCount: occupied.length, columnWidth };
 }
 
-function drawNotesForStaff(ctx, staffNotes, staffTop, ys, noteXBase, accColumns, accColumnWidth, lineSpacing, noteRadius) {
-    if (staffNotes.length === 0) return;
-    const n = staffNotes.length;
+// Notes a diatonic step apart cannot share a column. Comparing diatonic steps
+// rather than BASE_NOTES indices is what makes B->C read as a second instead of
+// a 6th, and within a run the offset alternates left/right/left — marching
+// further right with each note drifts the whole cluster off its column.
+function layoutSecondOffsets(notes, noteOffset) {
+    const shifts = new Array(notes.length).fill(0);
+    const byPitch = notes.map((n, i) => i)
+        .sort((a, b) => diatonicStep(notes[a]) - diatonicStep(notes[b]));
 
-    // X offsets for 2nd collisions. Comparing diatonic steps rather than
-    // BASE_NOTES indices is what makes B->C read as a second instead of a 6th.
-    // Within a run of seconds the offset alternates left/right/left; marching
-    // further right with each note drifts the whole cluster off its column.
-    const noteOffset = noteRadius * 2.2;
-    const xShifts = new Array(n).fill(0);
-    for (let i = 0; i < n; i++) {
+    for (let i = 0; i < byPitch.length; i++) {
         let runEnd = i;
-        while (runEnd + 1 < n &&
-               Math.abs(diatonicStep(staffNotes[runEnd + 1]) - diatonicStep(staffNotes[runEnd])) === 1) {
+        while (runEnd + 1 < byPitch.length &&
+               diatonicStep(notes[byPitch[runEnd + 1]]) - diatonicStep(notes[byPitch[runEnd]]) === 1) {
             runEnd++;
         }
-        for (let j = i; j <= runEnd; j++) xShifts[j] = ((j - i) % 2) * noteOffset;
+        for (let j = i; j <= runEnd; j++) shifts[byPitch[j]] = ((j - i) % 2) * noteOffset;
         i = runEnd;
     }
+    return shifts;
+}
 
-    staffNotes.forEach((note, idx) => {
+function drawChordNotes(ctx, chord, ys, xShifts, accColumns, opts) {
+    const { noteXBase, accColumnWidth, lineSpacing, noteRadius,
+            trebleTop, bassTop, ledgerSplitY } = opts;
+
+    chord.forEach((note, idx) => {
         const noteX = noteXBase + xShifts[idx];
         const y = ys[idx];
 
-        drawLedgerLines(ctx, noteX, staffTop, lineSpacing, noteRadius, y);
+        // Ledger lines grow from whichever staff the note sits nearer. Deciding
+        // that from position rather than MIDI number also puts enharmonics on
+        // the correct side: B#3 is written on the B line below middle C even
+        // though its MIDI number is 60.
+        drawLedgerLines(ctx, noteX, y <= ledgerSplitY ? trebleTop : bassTop,
+                        lineSpacing, noteRadius, y);
 
         // Accidentals hang off noteXBase, not noteX: they form columns to the
         // left of the chord as a whole and must not follow a notehead that was

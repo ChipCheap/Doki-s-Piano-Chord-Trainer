@@ -5,3 +5,7 @@ doki-chord-settings.json
 
 # Local dev server config
 .claude/launch.json
+
+# Personal tooling: the skill definitions driving the design/implement pipeline.
+# Machine-local and not part of the app.
+.claude/skills/
