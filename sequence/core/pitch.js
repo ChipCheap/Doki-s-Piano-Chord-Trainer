@@ -11,6 +11,9 @@ const SequencePitch = (() => {
     const LETTERS = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
     const LETTER_SEMITONES = [0, 2, 4, 5, 7, 9, 11];
     const ALTERATION_SYMBOLS = { '-2': '♭♭', '-1': '♭', '0': '', '1': '♯', '2': '♯♯' };
+    // The keys the app accepts from MIDI: A0 to C8, an 88-key piano.
+    const MIDI_LOWEST = 21;
+    const MIDI_HIGHEST = 108;
 
     function create(letter, alteration, octave) {
         return { letter, alteration, octave };
@@ -50,5 +53,5 @@ const SequencePitch = (() => {
         return pitch.letter + ALTERATION_SYMBOLS[pitch.alteration] + pitch.octave;
     }
 
-    return { LETTERS, create, diatonicStep, fromStep, midi, diatonicInterval, semitones, equals, label };
+    return { LETTERS, MIDI_LOWEST, MIDI_HIGHEST, create, diatonicStep, fromStep, midi, diatonicInterval, semitones, equals, label };
 })();
