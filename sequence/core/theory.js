@@ -76,15 +76,24 @@ const SequenceTheory = (() => {
     // ── Melody spelling ───────────────────────
     // The alteration a right-hand note on this letter takes over this chord.
     // A letter the chord contains is spelled as the chord spells it, so the
-    // melody never clashes with the harmony. In minor, the 6th and 7th outside
-    // the chord follow melodic minor: raised when the line rises into them,
-    // natural when it falls.
-    function melodyAlteration(key, chordInKey, letter, direction) {
-        const tone = chordTones(key, chordInKey).find(candidate => candidate.letter === letter);
+    // melody never clashes with the harmony. In minor the 6th and 7th travel
+    // together: when the chord holds one of them, the other takes the same
+    // form — both raised over V and vii°, both natural over iv, VI, ii°, III
+    // and VII — which keeps the augmented second between them out of the line.
+    // When the chord holds neither (i), they follow melodic minor by where the
+    // line goes next: raised when it goes on up, natural when it comes down.
+    // `onward` is that direction, +1 or −1.
+    function melodyAlteration(key, chordInKey, letter, onward) {
+        const tones = chordTones(key, chordInKey);
+        const tone = tones.find(candidate => candidate.letter === letter);
         if (tone) return tone.alteration;
+        const signature = signatureAlteration(key, letter);
         const degree = degreeOf(key, letter);
-        const raisable = key.mode === 'minor' && (degree === 5 || degree === 6);
-        return signatureAlteration(key, letter) + (raisable && direction > 0 ? 1 : 0);
+        if (key.mode !== 'minor' || (degree !== 5 && degree !== 6)) return signature;
+        const partnerLetter = letterOfDegree(key, degree === 5 ? 6 : 5);
+        const partner = tones.find(candidate => candidate.letter === partnerLetter);
+        const raised = partner ? partner.alteration > signatureAlteration(key, partnerLetter) : onward > 0;
+        return signature + (raised ? 1 : 0);
     }
 
     // ── Displayed accidentals ─────────────────
