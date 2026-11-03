@@ -115,6 +115,22 @@ const SequenceDifficulty = (() => {
         return Object.keys(PRESETS).find(id => JSON.stringify(PRESETS[id].parameters) === text) || null;
     }
 
+    // ── Weighted choice ───────────────────────
+    // Every random decision in generation goes through this, with the random
+    // source passed in. Choices weighted 0 are never made; null when every
+    // weight is 0.
+    function pick(choices, random) {
+        const total = choices.reduce((sum, choice) => sum + choice.weight, 0);
+        if (total <= 0) return null;
+        let remaining = random() * total;
+        for (const choice of choices) {
+            if (choice.weight <= 0) continue;
+            remaining -= choice.weight;
+            if (remaining < 0) return choice.item;
+        }
+        return choices.filter(choice => choice.weight > 0).pop().item;
+    }
+
     // ── Reading stored parameters ─────────────
     // Stored settings may be partial, from an older build, or tampered with.
     // Every value is taken over only if it is valid; anything else keeps the
@@ -188,6 +204,6 @@ const SequenceDifficulty = (() => {
     return {
         TEMPLATE_IDS, PATTERN_IDS, RHYTHM_VALUES, INTERVALS, WEAK_BEAT_KINDS, MAX_SIGNATURE,
         RANGE_LIMITS, MIN_RANGE_STEPS, PRESETS, DEFAULT_PRESET,
-        presetParameters, matchingPreset, sanitize, emptyGroups,
+        presetParameters, matchingPreset, pick, sanitize, emptyGroups,
     };
 })();
