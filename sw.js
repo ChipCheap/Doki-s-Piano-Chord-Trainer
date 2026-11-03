@@ -1,4 +1,4 @@
-const CACHE = 'piano-chord-v3';
+const CACHE = 'piano-chord-v4';
 
 // Paths are relative to this worker's own scope. Absolute '/repo-name/...'
 // paths only resolved on GitHub Pages — anywhere else (localhost, a fork under
@@ -8,6 +8,7 @@ const ASSETS = [
   './',
   './index.html',
   './style.css',
+  './storage.js',
   './music.js',
   './rendering.js',
   './audio.js',
