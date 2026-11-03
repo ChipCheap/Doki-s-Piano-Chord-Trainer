@@ -38,9 +38,10 @@ const SequenceDifficulty = (() => {
         rightRange: { low: STEP.C4, high: STEP.C7 },
         leftRange:  { low: STEP.C1, high: STEP.B3 },
     };
-    // Six steps span seven letters, C3 to B3 say: every letter once, which is
-    // what a hand needs to voice any triad and to step anywhere in the scale.
-    const MIN_RANGE_STEPS = 6;
+    // Seven steps span eight letters, a full octave such as D4 to D5: at least
+    // twelve keys whichever letter it starts on, so every letter and every key
+    // is there to voice any triad and to step anywhere in the scale.
+    const MIN_RANGE_STEPS = 7;
 
     const onlyThese = (ids, enabledIds) => Object.fromEntries(ids.map(id =>
         [id, { enabled: enabledIds.includes(id), weight: 100 }]));
