@@ -37,10 +37,13 @@ over months of use.
 - Minor keys build their chords from natural minor, except that the **dominant
   chords V and vii° take the raised seventh**, which is what pulls the music
   back to the tonic. III and VII keep the natural seventh, as in i–VI–III–VII.
-  **Stepwise right-hand lines use melodic minor** (6th and 7th raised going up,
-  unraised going down), except that the melody always matches the seventh of
-  the chord underneath it. This keeps the augmented second between the 6th and
-  the raised 7th out of the melody.
+  In the melody **the 6th and 7th always agree with the chord underneath**:
+  when the chord holds one of them, the other takes the same form — both
+  raised over V and vii°, both natural over iv, VI, ii°, III and VII. Over i,
+  where the chord holds neither, they follow melodic minor by where the line
+  goes next: raised going on up, natural coming down, so a neighbour is
+  spelled by the note it returns to. This keeps the augmented second between
+  the 6th and the raised 7th out of the melody.
 - Left hand plays one accompaniment pattern per passage, from a small set of
   standard figures (block chord, broken chord, Alberti bass, waltz bass,
   root–fifth).
@@ -149,16 +152,21 @@ allowed at that point — never by generating material and discarding what break
 them. How that is done is a matter for specification.
 
 - **Strong beats take chord tones.** Passing and neighbour tones fall on weak
-  beats only.
+  beats only. A neighbour steps away from a chord tone and back to it; a
+  passing tone runs from a chord tone towards the next, and only another
+  passing tone going the same way may follow it.
 - **Avoided on long or accented notes:** the 4th over a major chord, and any note
   a half step above a chord tone. They may still appear as short passing notes
   on weak beats.
 - **Intervals never written in the melody:** the augmented second, the tritone
   leap, and — at easier levels — the 7th.
-- **The leading tone resolves** up to the tonic.
+- **Over the dominant chords (V, vii°) the leading tone resolves** up to the
+  tonic. Elsewhere a line may pass down through it, as C–B–A does.
+- **No note is written more than three times in a row.**
 - **Leaps of a 4th, 5th or 6th land on chord tones** at both ends, and are
   followed by a step in the opposite direction. Two large leaps in a row in the
-  same direction are allowed only when together they outline the chord.
+  same direction are allowed only when together they outline the chord; three
+  never are.
 - **Bar 3 reuses the rhythm of bar 1**, with new pitches over its own chord.
   Repetition is what makes generated material read as composed; only the rhythm
   repeats, so the pitches stay unfamiliar.
