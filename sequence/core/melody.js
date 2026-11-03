@@ -150,8 +150,16 @@ const SequenceMelody = (() => {
                 } else {
                     // Approached by step from the note just before, so never straight after a rest.
                     if (!previous || state.afterRest || size !== 1 || (long && avoidedWhenLong(note.bar, pitch))) continue;
-                    kinds.push({ kind: 'passing', requirement: { step: step + direction, mustResolve: true } });
-                    kinds.push({ kind: 'neighbour', requirement: { step: step - direction, mustResolve: true } });
+                    // A neighbour steps away from a chord tone and back to it. A
+                    // passing tone runs from a chord tone towards the next, and
+                    // may follow another passing tone only going the same way.
+                    const continuesPassing = state.previousKind === 'passing' && state.previousDirection === direction;
+                    if (state.previousIsChordTone || continuesPassing) {
+                        kinds.push({ kind: 'passing', requirement: { step: step + direction, mustResolve: true } });
+                    }
+                    if (state.previousIsChordTone) {
+                        kinds.push({ kind: 'neighbour', requirement: { step: step - direction, mustResolve: true } });
+                    }
                 }
 
                 for (const { kind, requirement } of kinds) {
@@ -162,7 +170,8 @@ const SequenceMelody = (() => {
                     if (beatWeight <= 0) continue;
 
                     const next = {
-                        previous: pitch, previousIsChordTone: chordTone, afterRest: false, repeatRun,
+                        previous: pitch, previousIsChordTone: chordTone, previousKind: kind,
+                        previousDirection: direction, afterRest: false, repeatRun,
                         requiredStep: steps.size ? [...steps][0] : null,
                         mustResolve: all.some(entry => entry.mustResolve),
                         leapDirection: size >= LARGE_LEAP ? direction : 0, leapFrom,
@@ -197,7 +206,8 @@ const SequenceMelody = (() => {
 
         function stateKey(state) {
             const label = pitch => pitch ? SequencePitch.label(pitch) : '-';
-            return [label(state.previous), state.previousIsChordTone, state.afterRest, state.repeatRun,
+            return [label(state.previous), state.previousIsChordTone, state.previousKind, state.previousDirection,
+                    state.afterRest, state.repeatRun,
                     state.requiredStep, state.mustResolve, state.leapDirection, label(state.leapFrom)].join(',');
         }
 
@@ -229,7 +239,8 @@ const SequenceMelody = (() => {
             return best;
         }
 
-        let state = { previous: null, previousIsChordTone: false, afterRest: false, repeatRun: 0, ...RELEASED };
+        let state = { previous: null, previousIsChordTone: false, previousKind: null, previousDirection: 0,
+                      afterRest: false, repeatRun: 0, ...RELEASED };
         const chosen = [];
         for (let index = 0; index < notes.length; index++) {
             const note = notes[index];
@@ -250,7 +261,8 @@ const SequenceMelody = (() => {
                 if (!fallback) return null;
                 chosen.push(fallback);
                 const repeatRun = state.previous && SequencePitch.equals(state.previous, fallback) ? state.repeatRun + 1 : 1;
-                state = { previous: fallback, previousIsChordTone: true, afterRest: false, repeatRun, ...RELEASED };
+                state = { previous: fallback, previousIsChordTone: true, previousKind: 'chordTone', previousDirection: 0,
+                          afterRest: false, repeatRun, ...RELEASED };
             }
         }
 
