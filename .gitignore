@@ -3,6 +3,9 @@
 settings.json
 doki-chord-settings.json
 
+# Local test page for Sequence Mode's core. Kept on this machine only.
+tests.html
+
 # Local dev server config
 .claude/launch.json
 
