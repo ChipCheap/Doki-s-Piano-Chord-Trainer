@@ -34,7 +34,7 @@ const SequencePassage = (() => {
                 if (!byPosition.has(event.position)) byPosition.set(event.position, []);
                 byPosition.get(event.position).push(...event.pitches);
             }
-            [...byPosition.keys()].sort((a, b) => a - b).forEach(position =>
+            [...byPosition.keys()].sort((first, second) => first - second).forEach(position =>
                 result.push({ bar: barIndex, position, pitches: byPosition.get(position) }));
         });
         return result;
