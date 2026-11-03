@@ -30,8 +30,10 @@ const SequenceDifficulty = (() => {
 
     // Staff steps: C4 is 28. The right hand never goes below middle C and the
     // left never above the B below it, which is what keeps each hand on its
-    // own staff whatever the spelling. Each range spans at least an octave.
-    const STEP = { C1: 7, C2: 14, F2: 17, A2: 19, C3: 21, B3: 27, C4: 28, G5: 39, A5: 40, C6: 42, E6: 44, C7: 49 };
+    // own staff whatever the spelling. The presets start the left hand no
+    // higher than F2, the highest start that still fits every chord in root
+    // position below B3.
+    const STEP = { C1: 7, C2: 14, F2: 17, B3: 27, C4: 28, G5: 39, A5: 40, C6: 42, E6: 44, C7: 49 };
     const RANGE_LIMITS = {
         rightRange: { low: STEP.C4, high: STEP.C7 },
         leftRange:  { low: STEP.C1, high: STEP.B3 },
@@ -57,7 +59,7 @@ const SequenceDifficulty = (() => {
                 weakBeats: weightsFor(WEAK_BEAT_KINDS, [100, 60, 0]),
                 patterns: onlyThese(PATTERN_IDS, ['block', 'rootFifth']),
                 rightRange: { low: STEP.C4, high: STEP.G5 },
-                leftRange: { low: STEP.C3, high: STEP.B3 },
+                leftRange: { low: STEP.F2, high: STEP.B3 },
             },
         },
         elementary: {
@@ -71,7 +73,7 @@ const SequenceDifficulty = (() => {
                 weakBeats: weightsFor(WEAK_BEAT_KINDS, [100, 60, 40]),
                 patterns: onlyThese(PATTERN_IDS, ['block', 'rootFifth', 'broken', 'waltz']),
                 rightRange: { low: STEP.C4, high: STEP.A5 },
-                leftRange: { low: STEP.A2, high: STEP.B3 },
+                leftRange: { low: STEP.F2, high: STEP.B3 },
             },
         },
         intermediate: {
