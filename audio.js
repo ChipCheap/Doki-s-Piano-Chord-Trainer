@@ -16,7 +16,7 @@ function midiToFreq(midi) {
 // The app's one tone: a triangle with a sine overtone an octave up. The
 // envelope starts at `start`; the main oscillator may begin `delay` later,
 // which is how a chord rolls its notes. `length` is how long the voice lasts,
-// release included.
+// release included. Returns what has to be silenced to stop it early.
 function soundVoice(ctx, midi, start, length, delay) {
     const release = start + length - 0.1;
     // Short notes reach the sustain level sooner, so the envelope's points stay
@@ -49,10 +49,33 @@ function soundVoice(ctx, midi, start, length, delay) {
     gain.connect(ctx.destination);
     osc.start(start + delay);
     osc.stop(start + length);
+
+    return [{ osc, gain }, { osc: osc2, gain: gain2 }];
 }
 
 function playChord(midiNotes) {
     const ctx = getAudioCtx();
     const now = ctx.currentTime;
     midiNotes.forEach((midi, i) => soundVoice(ctx, midi, now, 2.6, i * 0.06));
+}
+
+// Plays notes at their own times: each is { midi, start, duration }, in
+// seconds from now. Returns a function that stops everything still sounding
+// or scheduled, fading over a few milliseconds so the cut does not click.
+function playNotes(notes) {
+    const ctx = getAudioCtx();
+    const now = ctx.currentTime;
+    const voices = notes.flatMap(note =>
+        soundVoice(ctx, note.midi, now + note.start, note.duration + 0.1, 0));
+
+    return function stopNotes() {
+        const at = ctx.currentTime;
+        for (const voice of voices) {
+            const level = voice.gain.gain;
+            level.cancelScheduledValues(at);
+            level.setValueAtTime(level.value, at);
+            level.setTargetAtTime(0, at, 0.01);
+            voice.osc.stop(at + 0.05);
+        }
+    };
 }
