@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════
-//  MIDI INPUT & CHORD CHECKING
+//  MIDI INPUT — shared by every page
 // ═══════════════════════════════════════════════
 
 const midiHeldNotes    = new Set();
@@ -89,7 +89,7 @@ function onMidiMessage(event) {
         midiDebugRecord(data, 'ch' + ch + ' note-on ' + note + ' v' + velocity, false);
         midiSustainPending.delete(note);
         midiHeldNotes.add(note);
-        practiceResetAdvanceTimer();
+        midiAnnounce('notePressed', note);
 
     } else if (type === 0x80 || (type === 0x90 && velocity === 0)) {
         if (note < MIDI_NOTE_MIN || note > MIDI_NOTE_MAX) {
@@ -142,7 +142,7 @@ function onMidiMessage(event) {
 
     midiResetIdleTimer();
     midiUpdateHeldDisplay();
-    midiCheckMatch();
+    midiAnnounce('heldChanged');
 }
 
 function midiPanic() {
@@ -150,54 +150,46 @@ function midiPanic() {
     midiSustainPending.clear();
     midiSustainHeld = false;
     midiUpdateHeldDisplay();
-    midiCheckMatch();
+    midiAnnounce('heldChanged');
 }
 
-// The single definition of "did they play it right", shared by the live
-// readout and the practice results so the two cannot disagree.
-function compareChord(chordNotes, heldMidi) {
-    const chordMidis = new Set(chordNotes.map(n => n.midi));
-    const missing = chordNotes.filter(n => !heldMidi.has(n.midi));
-    const extra   = [...heldMidi].filter(m => !chordMidis.has(m));
-    return {missing, extra, correct: missing.length === 0 && extra.length === 0};
+// ── Listeners ─────────────────────────────────
+// Each page registers what it wants to be told, so this file never reaches
+// into a mode. A listener is an object with any of: notePressed(note) for each
+// note-on, heldChanged() after anything changes the held set, and
+// resetPressed() when the player presses Reset — kept apart from heldChanged
+// because only the button, not an idle-timeout panic, means "start over".
+const midiListeners = [];
+
+function midiAddListener(listener) {
+    midiListeners.push(listener);
 }
+
+function midiAnnounce(event, note) {
+    for (const listener of midiListeners) {
+        if (listener[event]) listener[event](note);
+    }
+}
+
+// ── Key names ─────────────────────────────────
+// Kept here rather than borrowed from music.js so this file loads on a page
+// that has no chord theory. A key has no spelling of its own, so names are for
+// display only.
+const MIDI_KEY_NAMES_FLAT  = ['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B'];
+const MIDI_KEY_NAMES_SHARP = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
 
 // Name for a bare MIDI number, where no spelling is known.
 function midiNoteName(midi) {
-    return NOTE_NAMES_FLAT[midi % 12] + (Math.floor(midi / 12) - 1);
-}
-
-function midiCheckMatch() {
-    const resultEl = document.getElementById('midiResult');
-    if (midiHeldNotes.size === 0) {
-        resultEl.className = 'midi-result idle';
-        resultEl.textContent = 'Play the chord…';
-        return;
-    }
-    if (currentChordNotes.length === 0) return;
-
-    const {missing, extra, correct} = compareChord(currentChordNotes, midiHeldNotes);
-
-    if (correct) {
-        resultEl.className = 'midi-result correct';
-        resultEl.textContent = '✓ Correct!';
-    } else if (missing.length === 0) {
-        resultEl.className = 'midi-result extra';
-        resultEl.textContent = '✓ All chord tones + ' + extra.map(midiNoteName).join(', ') + ' extra';
-    } else {
-        resultEl.className = 'midi-result wrong';
-        resultEl.textContent = '✗ Missing: ' + missing.map(n => noteLabel(n) + n.octave).join(', ');
-    }
+    return MIDI_KEY_NAMES_FLAT[midi % 12] + (Math.floor(midi / 12) - 1);
 }
 
 function midiUpdateHeldDisplay() {
     const names = [...midiHeldNotes].sort((a, b) => a - b).map(n => {
         const pc  = n % 12;
         const oct = Math.floor(n / 12) - 1;
-        return NOTE_NAMES_FLAT[pc] + (NOTE_NAMES_FLAT[pc].length > 1 ? '/' + NOTE_NAMES_SHARP[pc] : '') + oct;
+        return MIDI_KEY_NAMES_FLAT[pc] + (MIDI_KEY_NAMES_FLAT[pc].length > 1 ? '/' + MIDI_KEY_NAMES_SHARP[pc] : '') + oct;
     });
     document.getElementById('midiHeldNotes').textContent = names.length ? names.join('  ') : '—';
-    redrawPiano();
 }
 
 function midiSetStatus(state) {
@@ -207,17 +199,10 @@ function midiSetStatus(state) {
     if (state !== 'connected') document.getElementById('midiDeviceName').textContent = '';
 }
 
-function redrawPiano() {
-    const hideChord = document.getElementById('hideChordCheckbox').checked;
-    drawPiano(pianoCanvas, currentChordNotes, midiHeldNotes, hideChord);
-}
-
 // ── Panel controls ────────────────────────────
 document.getElementById('midiResetBtn').addEventListener('click', () => {
     midiPanic();
-    // Also drop whatever the current practice attempt accumulated, or a stuck
-    // note would still be counted against you when the attempt is captured.
-    if (typeof practicePeakHeld !== 'undefined') practicePeakHeld.clear();
+    midiAnnounce('resetPressed');
 });
 
 const midiDebugCheckbox = document.getElementById('midiDebugCheckbox');

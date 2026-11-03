@@ -50,8 +50,54 @@ Object.keys(CHORD_TYPES).forEach(t => {
     paletteGrid.appendChild(btn);
 });
 
-// ── Shared state (read by midi.js and practice.js) ──
+// ── Shared state (read by practice.js) ──
 let currentChordNotes = [];
+
+// ── Live MIDI readout ─────────────────────────
+// The single definition of "did they play it right", shared by the live
+// readout and the practice results so the two cannot disagree.
+function compareChord(chordNotes, heldMidi) {
+    const chordMidis = new Set(chordNotes.map(n => n.midi));
+    const missing = chordNotes.filter(n => !heldMidi.has(n.midi));
+    const extra   = [...heldMidi].filter(m => !chordMidis.has(m));
+    return {missing, extra, correct: missing.length === 0 && extra.length === 0};
+}
+
+function midiCheckMatch() {
+    const resultEl = document.getElementById('midiResult');
+    if (midiHeldNotes.size === 0) {
+        resultEl.className = 'midi-result idle';
+        resultEl.textContent = 'Play the chord…';
+        return;
+    }
+    if (currentChordNotes.length === 0) return;
+
+    const {missing, extra, correct} = compareChord(currentChordNotes, midiHeldNotes);
+
+    if (correct) {
+        resultEl.className = 'midi-result correct';
+        resultEl.textContent = '✓ Correct!';
+    } else if (missing.length === 0) {
+        resultEl.className = 'midi-result extra';
+        resultEl.textContent = '✓ All chord tones + ' + extra.map(midiNoteName).join(', ') + ' extra';
+    } else {
+        resultEl.className = 'midi-result wrong';
+        resultEl.textContent = '✗ Missing: ' + missing.map(n => noteLabel(n) + n.octave).join(', ');
+    }
+}
+
+function redrawPiano() {
+    const hideChord = document.getElementById('hideChordCheckbox').checked;
+    drawPiano(pianoCanvas, currentChordNotes, midiHeldNotes, hideChord);
+}
+
+midiAddListener({
+    notePressed: () => practiceResetAdvanceTimer(),
+    heldChanged: () => { redrawPiano(); midiCheckMatch(); },
+    // Also drop whatever the current practice attempt accumulated, or a stuck
+    // note would still be counted against you when the attempt is captured.
+    resetPressed: () => practicePeakHeld.clear(),
+});
 
 function updateDisplay() {
     const rootIdx = parseInt(rootSelect.value);
