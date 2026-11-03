@@ -19,9 +19,10 @@ function midiToFreq(midi) {
 // release included. Returns what has to be silenced to stop it early.
 function soundVoice(ctx, midi, start, length, delay) {
     const release = start + length - 0.1;
-    // Short notes reach the sustain level sooner, so the envelope's points stay
-    // in time order however short the note is.
-    const sustainAt = start + Math.min(0.3, (length - 0.1) / 2);
+    // Short notes reach the sustain level sooner. Clamped between the attack
+    // peak and the release, so the envelope's points stay in time order for any
+    // voice longer than the 0.12 s minimum a note is given below.
+    const sustainAt = start + Math.max(0.011, Math.min(0.3, (length - 0.1) / 2));
 
     const osc  = ctx.createOscillator();
     const gain = ctx.createGain();
@@ -62,11 +63,13 @@ function playChord(midiNotes) {
 // Plays notes at their own times: each is { midi, start, duration }, in
 // seconds from now. Returns a function that stops everything still sounding
 // or scheduled, fading over a few milliseconds so the cut does not click.
+const MIN_NOTE_SECONDS = 0.02;
+
 function playNotes(notes) {
     const ctx = getAudioCtx();
     const now = ctx.currentTime;
-    const voices = notes.flatMap(note =>
-        soundVoice(ctx, note.midi, now + note.start, note.duration + 0.1, 0));
+    const voices = notes.flatMap(note => soundVoice(ctx, note.midi, now + note.start,
+        Math.max(MIN_NOTE_SECONDS, note.duration) + 0.1, 0));
 
     return function stopNotes() {
         const at = ctx.currentTime;
