@@ -19,6 +19,8 @@ const SequenceMelody = (() => {
     // them — and is never written. A 7th or wider has no entry at all.
     const PLAIN_SIZES = [[0], [1, 2], [3, 4], [5], [7], [8, 9]];
     const LARGE_LEAP = 3;
+    // More of the same pitch in a row than this stops reading as a melody.
+    const MOST_IN_A_ROW = 3;
     const TONIC_PREFERENCE = 4;
     const MIDI_LOWEST = 21;
     const MIDI_HIGHEST = 108;
@@ -118,6 +120,9 @@ const SequenceMelody = (() => {
                     direction = Math.sign(distance);
                 }
 
+                const repeatRun = previous && SequencePitch.equals(previous, pitch) ? state.repeatRun + 1 : 1;
+                if (repeatRun > MOST_IN_A_ROW) continue;
+
                 const chordTone = isChordTone(note.bar, pitch);
                 if (strong && !chordTone) continue;
 
@@ -157,7 +162,7 @@ const SequenceMelody = (() => {
                     if (beatWeight <= 0) continue;
 
                     const next = {
-                        previous: pitch, previousIsChordTone: chordTone, afterRest: false,
+                        previous: pitch, previousIsChordTone: chordTone, afterRest: false, repeatRun,
                         requiredStep: steps.size ? [...steps][0] : null,
                         mustResolve: all.some(entry => entry.mustResolve),
                         leapDirection: size >= LARGE_LEAP ? direction : 0, leapFrom,
@@ -192,18 +197,21 @@ const SequenceMelody = (() => {
 
         function stateKey(state) {
             const label = pitch => pitch ? SequencePitch.label(pitch) : '-';
-            return [label(state.previous), state.previousIsChordTone, state.afterRest, state.requiredStep,
-                    state.mustResolve, state.leapDirection, label(state.leapFrom)].join(',');
+            return [label(state.previous), state.previousIsChordTone, state.afterRest, state.repeatRun,
+                    state.requiredStep, state.mustResolve, state.leapDirection, label(state.leapFrom)].join(',');
         }
 
         // Only reached when no line at all fits — bound keys crowding the
         // range: the playable chord tone nearest the previous note, preferring
-        // one that is neither a leading tone nor reached by an interval the
-        // rules never write, with every obligation released.
-        function nearestChordTone(note, previous) {
+        // one that is neither a leading tone, nor reached by an interval the
+        // rules never write, nor one repeat too many, with every obligation
+        // released.
+        function nearestChordTone(note, state) {
+            const previous = state.previous;
             const anchor = previous ? SequencePitch.midi(previous) : SequencePitch.midi(SequencePitch.fromStep(range.low + 2, 0));
             const cost = pitch => {
                 let penalty = isLeadingTone(pitch) ? 1000 : 0;
+                if (previous && SequencePitch.equals(previous, pitch) && state.repeatRun >= MOST_IN_A_ROW) penalty += 500;
                 if (previous) {
                     const size = Math.abs(SequencePitch.diatonicInterval(previous, pitch));
                     const plain = size < PLAIN_SIZES.length &&
@@ -221,7 +229,7 @@ const SequenceMelody = (() => {
             return best;
         }
 
-        let state = { previous: null, previousIsChordTone: false, afterRest: false, ...RELEASED };
+        let state = { previous: null, previousIsChordTone: false, afterRest: false, repeatRun: 0, ...RELEASED };
         const chosen = [];
         for (let index = 0; index < notes.length; index++) {
             const note = notes[index];
@@ -238,10 +246,11 @@ const SequenceMelody = (() => {
                 chosen.push(choice.pitch);
                 state = choice.state;
             } else {
-                const fallback = nearestChordTone(note, state.previous);
+                const fallback = nearestChordTone(note, state);
                 if (!fallback) return null;
                 chosen.push(fallback);
-                state = { previous: fallback, previousIsChordTone: true, afterRest: false, ...RELEASED };
+                const repeatRun = state.previous && SequencePitch.equals(state.previous, fallback) ? state.repeatRun + 1 : 1;
+                state = { previous: fallback, previousIsChordTone: true, afterRest: false, repeatRun, ...RELEASED };
             }
         }
 
