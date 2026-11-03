@@ -119,7 +119,7 @@ const SequenceTheory = (() => {
     }
 
     return {
-        KEYS, signatureAlteration, degreeOf, letterOfDegree, chord, chordTones, isChordTone,
+        KEYS, signatureAlteration, degreeOf, chord, chordTones, isChordTone,
         melodyAlteration, displayedAccidentals, keyLabel,
     };
 })();

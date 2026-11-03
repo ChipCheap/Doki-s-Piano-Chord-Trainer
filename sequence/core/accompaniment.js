@@ -72,8 +72,6 @@ const SequenceAccompaniment = (() => {
     // Staff-step offsets above the bass for root position and the two
     // inversions of a close triad.
     const INVERSION_OFFSETS = [[0, 2, 4], [0, 2, 5], [0, 3, 5]];
-    const MIDI_LOWEST = 21;
-    const MIDI_HIGHEST = 108;
 
     function voicings(key, chordInKey, range, boundMidi, rootPosition) {
         const tones = SequenceTheory.chordTones(key, chordInKey);
@@ -90,7 +88,7 @@ const SequenceAccompaniment = (() => {
                 });
                 const playable = pitches.every(pitch => {
                     const midi = SequencePitch.midi(pitch);
-                    return midi >= MIDI_LOWEST && midi <= MIDI_HIGHEST && !boundMidi.has(midi);
+                    return midi >= SequencePitch.MIDI_LOWEST && midi <= SequencePitch.MIDI_HIGHEST && !boundMidi.has(midi);
                 });
                 if (playable) result.push(pitches);
             }

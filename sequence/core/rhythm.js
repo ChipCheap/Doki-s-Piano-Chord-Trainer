@@ -10,13 +10,7 @@
 // Cell notation: e eighth, q quarter, q. dotted quarter, h half, h. dotted
 // half; a trailing r makes it a rest (er, qr, hr).
 const SequenceRhythm = (() => {
-    const TOKENS = {
-        e:  { value: 'eighth', duration: 1 },
-        q:  { value: 'quarter', duration: 2 },
-        'q.': { value: 'dottedQuarter', duration: 3 },
-        h:  { value: 'half', duration: 4 },
-        'h.': { value: 'dottedHalf', duration: 6 },
-    };
+    const TOKEN_VALUES = { e: 'eighth', q: 'quarter', 'q.': 'dottedQuarter', h: 'half', 'h.': 'dottedHalf' };
 
     const MAIN_CELLS = {
         '4/4': [
@@ -44,7 +38,8 @@ const SequenceRhythm = (() => {
         let position = 0;
         return cell.split(' ').map(token => {
             const rest = token.endsWith('r');
-            const { value, duration } = TOKENS[rest ? token.slice(0, -1) : token];
+            const value = TOKEN_VALUES[rest ? token.slice(0, -1) : token];
+            const duration = SequenceMeter.DURATIONS[value];
             const event = { position, duration, value, rest };
             position += duration;
             return event;

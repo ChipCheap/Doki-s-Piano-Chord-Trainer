@@ -46,7 +46,7 @@ const SequenceDifficulty = (() => {
     const onlyThese = (ids, enabledIds) => Object.fromEntries(ids.map(id =>
         [id, { enabled: enabledIds.includes(id), weight: 100 }]));
     const weightsFor = (names, values) => Object.fromEntries(names.map((name, i) => [name, values[i]]));
-    const signaturesUpTo = most => Array.from({ length: MAX_SIGNATURE + 1 }, (_, count) => count <= most ? 100 : 0);
+    const signaturesUpTo = most => [...Array(MAX_SIGNATURE + 1).keys()].map(count => count <= most ? 100 : 0);
 
     const PRESETS = {
         beginner: {
@@ -107,6 +107,14 @@ const SequenceDifficulty = (() => {
         },
     };
     const DEFAULT_PRESET = 'elementary';
+
+    // Presets are read, never written: a settings panel copies one through
+    // presetParameters before changing anything.
+    const deepFreeze = value => {
+        if (value !== null && typeof value === 'object') Object.values(value).forEach(deepFreeze);
+        return Object.freeze(value);
+    };
+    deepFreeze(PRESETS);
 
     function presetParameters(presetId) {
         return structuredClone(PRESETS[presetId].parameters);

@@ -13,7 +13,6 @@
 // completed from it under the same rules. That question is answered once per
 // position and situation and remembered, which keeps it exact and fast.
 const SequenceMelody = (() => {
-    const INTERVAL_NAMES = ['repeat', 'step', 'third', 'fourth', 'fifth', 'sixth'];
     // The semitone sizes each staff distance may have. Anything else is
     // augmented or diminished — the augmented second and the tritone among
     // them — and is never written. A 7th or wider has no entry at all.
@@ -25,8 +24,6 @@ const SequenceMelody = (() => {
     // harmony; elsewhere a line may walk down through it, as C–B–A does.
     const DOMINANT_NUMERALS = ['V', 'vii°'];
     const TONIC_PREFERENCE = 4;
-    const MIDI_LOWEST = 21;
-    const MIDI_HIGHEST = 108;
 
     // The obligations a state carries forward, cleared by a rest or a fallback.
     const RELEASED = { requiredStep: null, mustResolve: false, leapDirection: 0, leapFrom: null, leapsInARow: 0 };
@@ -42,8 +39,6 @@ const SequenceMelody = (() => {
         notes.reduce((count, note, index) => { soundingBefore[index] = count; return count + (note.rest ? 0 : 1); }, 0);
         const sounding = notes.filter(note => !note.rest).length;
 
-        const isChordTone = (bar, pitch) => tones[bar].some(tone =>
-            tone.letter === pitch.letter && tone.alteration === pitch.alteration);
         const isTonic = pitch => pitch.letter === key.tonic.letter && pitch.alteration === key.tonic.alteration;
         const isLeadingTone = pitch => {
             const tonicAbove = SequencePitch.create(key.tonic.letter, key.tonic.alteration, pitch.octave +
@@ -52,7 +47,7 @@ const SequenceMelody = (() => {
         };
         const playable = pitch => {
             const midi = SequencePitch.midi(pitch);
-            return midi >= MIDI_LOWEST && midi <= MIDI_HIGHEST && !boundMidi.has(midi);
+            return midi >= SequencePitch.MIDI_LOWEST && midi <= SequencePitch.MIDI_HIGHEST && !boundMidi.has(midi);
         };
 
         // The ways a staff step can be spelled here, each with the only kind of
@@ -123,7 +118,7 @@ const SequenceMelody = (() => {
                         size = Math.abs(distance);
                         if (size >= PLAIN_SIZES.length) continue;
                         if (!PLAIN_SIZES[size].includes(Math.abs(SequencePitch.semitones(previous, pitch)))) continue;
-                        intervalWeight = parameters.intervals[INTERVAL_NAMES[size]];
+                        intervalWeight = parameters.intervals[SequenceDifficulty.INTERVALS[size]];
                         if (intervalWeight <= 0) continue;
                         direction = Math.sign(distance);
                     }
@@ -144,8 +139,9 @@ const SequenceMelody = (() => {
                         // A third large leap the same way is never allowed.
                         if (state.leapDirection === direction && state.leapsInARow >= 2) continue;
                         if (state.leapDirection === direction) {
-                            const outlines = state.leapFrom && isChordTone(note.bar, state.leapFrom) &&
-                                isChordTone(note.bar, previous) &&
+                            const outlines = state.leapFrom &&
+                                SequenceTheory.isChordTone(key, chords[note.bar], state.leapFrom) &&
+                                SequenceTheory.isChordTone(key, chords[note.bar], previous) &&
                                 Math.abs(step - SequencePitch.diatonicStep(state.leapFrom)) <= 7;
                             if (!outlines) continue;
                         }
