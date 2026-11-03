@@ -3,8 +3,12 @@
 // ═══════════════════════════════════════════════
 
 // The one entry point that turns settings into a passage. It returns either
-// { passage } or { failure }, never anything in between: a passage that could
-// only be made by breaking a rule is reported, not produced.
+// { passage } or { failure }. Settings that cannot produce a passage are
+// reported up front by `problems`, which the settings panel also uses to warn
+// before anything is generated. A passage always keeps the hard rules —
+// ranges, the clef split, no bound key; only the melody's last-resort
+// fallback, reached when bound keys leave no line at all, may bend a melody
+// rule.
 //
 // A failure is { message, keys }: a sentence for the player, and the MIDI
 // numbers of the bound keys involved, if any, for the page to name.
@@ -25,13 +29,15 @@ const SequenceGenerator = (() => {
     }
 
     function failure(message, keys) {
-        return { failure: { message, keys: keys || [] } };
+        return { message, keys: keys || [] };
     }
 
+    // Why these settings cannot produce a passage, or null if they can.
     // settings: { parameters, timeSignature } — parameters as difficulty.js
-    // describes them. boundMidi: the keys bound to controls. random: () → [0, 1).
-    function generate(settings, boundMidi, random) {
+    // describes them. boundMidi: the keys bound to controls.
+    function problems(settings, boundMidi) {
         const { parameters, timeSignature } = settings;
+        if (!SequenceMeter.TIME_SIGNATURES[timeSignature]) return failure('Unknown time signature: ' + timeSignature + '.');
 
         const empty = SequenceDifficulty.emptyGroups(parameters);
         if (empty.length) return failure('Nothing is selectable in: ' + empty.join(', ') + '.');
@@ -51,25 +57,33 @@ const SequenceGenerator = (() => {
                                'bindings. Move these bindings or widen the range:', inside);
             }
         }
+        return null;
+    }
+
+    // random: () → [0, 1).
+    function generate(settings, boundMidi, random) {
+        const problem = problems(settings, boundMidi);
+        if (problem) return { failure: problem };
+        const { parameters, timeSignature } = settings;
 
         const { key, template } = SequenceProgressions.choose(parameters, random);
         const chords = template.numerals.map(numeral => SequenceTheory.chord(key, numeral));
         const patternId = SequenceAccompaniment.choosePattern(parameters.patterns, timeSignature, random);
         const left = SequenceAccompaniment.accompany(key, chords, patternId, timeSignature, parameters.leftRange, boundMidi);
         if (!left) {
-            return failure('The left hand cannot voice every chord around the control bindings in its range:',
-                           freeRun(parameters.leftRange, boundMidi).inside);
+            return { failure: failure('The left hand cannot voice every chord around the control bindings in its range:',
+                                      freeRun(parameters.leftRange, boundMidi).inside) };
         }
         const rhythm = SequenceRhythm.choose(timeSignature, parameters.rhythm, random);
         const right = SequenceMelody.compose({ key, chords, rhythm, timeSignature, parameters, boundMidi }, random);
         if (!right) {
-            return failure('The right hand cannot find chord tones around the control bindings in its range:',
-                           freeRun(parameters.rightRange, boundMidi).inside);
+            return { failure: failure('The right hand cannot find chord tones around the control bindings in its range:',
+                                      freeRun(parameters.rightRange, boundMidi).inside) };
         }
 
         const bars = chords.map((chordInKey, bar) => ({ chord: chordInKey, right: right[bar], left: left[bar] }));
         return { passage: SequencePassage.create(key, timeSignature, patternId, bars) };
     }
 
-    return { generate };
+    return { problems, generate };
 })();
