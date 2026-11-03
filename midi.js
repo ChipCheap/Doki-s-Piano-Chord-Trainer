@@ -125,6 +125,9 @@ function onMidiMessage(event) {
                 midiSustainHeld = false;
                 for (const n of midiSustainPending) midiHeldNotes.delete(n);
                 midiSustainPending.clear();
+                // Lifting the pedal releases every note it was holding.
+                midiUpdateHeldDisplay();
+                midiAnnounce('heldChanged');
             }
         } else if (note === 120 || note === 123) {
             midiPanic();
