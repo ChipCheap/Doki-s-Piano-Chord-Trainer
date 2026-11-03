@@ -27,22 +27,34 @@ over months of use.
 ### In
 
 - A distinct mode reached by its own tab, with its own controls.
-- Four-bar passages over a short chord progression drawn from common templates
-  (I–V–vi–IV, ii–V–I and similar), built diatonically in a key.
-- The key is **derived from the progression's opening chord**, never asked for.
+- Four-bar passages in a major or minor key, over a short chord progression
+  drawn from common templates for that mode — major: I–V–vi–IV, ii–V–I and
+  similar; minor: i–iv–V–i, i–VI–III–VII, ii°–V–i and similar.
+- The key is **chosen at random by the generator first**, and the progression is
+  then built in it. The player is never asked for a key.
+- The passage is written with the key's signature; accidentals appear only where
+  a note leaves the key, as in printed music.
+- Minor keys use **harmonic minor for the chords** (raised seventh, so V is
+  major and vii° diminished) and **melodic minor for stepwise right-hand lines**
+  (6th and 7th raised going up, unraised going down). This keeps the augmented
+  second between the 6th and the raised 7th out of the melody.
 - Left hand plays one accompaniment pattern per passage, from a small set of
   standard figures (block chord, broken chord, Alberti bass, waltz bass,
   root–fifth).
 - Right hand plays chord tones decorated with passing tones (stepwise notes
   filling the gap between chord tones) and neighbour tones (a step away and
-  back).
+  back), with leaps of a 4th, 5th or 6th between chord tones — all under the
+  melody rules below.
 - Rhythm: half, quarter and eighth notes, their dotted forms, and rests.
 - Time signatures introduced as a ladder: **4/4 first, then 3/4, then 6/8, then
   7/8** — see Open Questions on 7/8.
 - Full rhythmic notation: stems, flags, beamed groups, rests, barlines, time
   signature, duration-based horizontal spacing.
-- Post-attempt review by aligning the played note stream against the expected
-  one, attributed per bar.
+- Post-attempt review by aligning the played notes against the passage,
+  attributed per bar.
+- A simpler whole-passage check — which notes of the passage came up at all,
+  ignoring order — built first and kept afterwards as a second view beside the
+  per-bar review.
 - Octave displacement recognised and reported as a single error.
 - Retry the same passage, or generate a new one — both explicit actions.
 - Playback of the passage, available only once an attempt has finished.
@@ -52,7 +64,8 @@ over months of use.
 ### Out
 
 - **Any evaluation of timing or tempo.** No metronome grading, no clock, no
-  judgement of whether a note was early or late.
+  judgement of whether a note was early or late. Timestamps are not read at
+  all, not even to group notes played together.
 - **Hand attribution in feedback.** MIDI carries no hand information and the
   mode will not guess.
 - Scoring, grading or progress metrics beyond per-bar error reporting.
@@ -67,14 +80,13 @@ over months of use.
 
 ```
 no passage ──generate──▶ passage shown ──first note played──▶ attempt
-                              ▲                                  │
-                              │                     done, or alignment
-                              │                     reaches the end
-                              │                                  ▼
-                              └──────────retry──────────────  review
-                                                                 │
-                                                       generate  ▼
-                                                           no passage
+                           ▲      ▲                              │
+                           │      │                 done, or alignment
+                           │      │                 reaches the end
+                           │      │                              ▼
+                           │      └───retry (same passage)───  review
+                           │                                     │
+                           └──────generate (new passage)─────────┘
 ```
 
 - The **whole passage is visible from the start.** It never advances, scrolls or
@@ -90,14 +102,56 @@ no passage ──generate──▶ passage shown ──first note played──�
 
 ### Why alignment rather than matching
 
-The played stream is compared to the expected stream the way a text diff
-compares two files. This buys three things that exact matching cannot:
+The played notes are compared to the passage the way a text diff compares two
+files. This buys three things that exact matching cannot:
 
 1. Position in the passage without any timing information, which is what makes
    per-bar attribution possible at all.
 2. Graceful degradation when the input drops or corrupts a note — a diff absorbs
    a missing element, where exact matching derails and never recovers.
 3. A principled distinction between *missed*, *extra* and *out of order*.
+
+**Notes that sound together.** A left-hand chord and the right-hand note above
+it start at the same moment, but a MIDI keyboard delivers their key presses in
+whatever order the fingers land. So the two sides of the comparison are shaped
+differently:
+
+- **The passage is a list of groups**, each group holding the notes that start
+  at the same moment. The generator knows these exactly; nothing is inferred.
+- **What was played is a flat list** of key presses, in the order they arrived.
+- **Within a group, any order matches.** A note counts as out of order only when
+  it arrives a whole group early or late.
+
+Per-bar attribution comes from the passage side: once a played note is matched
+to a passage note, its bar is known. What was played is never cut into bars or
+groups — closing a group when the hands come off was considered and rejected,
+because a held left hand, legato playing or the sustain pedal would merge whole
+bars into one group.
+
+### Melody rules
+
+The right-hand line follows standard melody-writing practice. The rules are
+applied while each note is chosen — the generator picks only from notes already
+allowed at that point — never by generating material and discarding what breaks
+them. How that is done is a matter for specification.
+
+- **Strong beats take chord tones.** Passing and neighbour tones fall on weak
+  beats only.
+- **Avoided on long or accented notes:** the 4th over a major chord, and any note
+  a half step above a chord tone. They may still appear as short passing notes
+  on weak beats.
+- **Intervals never written in the melody:** the augmented second, the tritone
+  leap, and — at easier levels — the 7th.
+- **The leading tone resolves** up to the tonic.
+- **Leaps of a 4th, 5th or 6th land on chord tones** at both ends, and are
+  followed by a step in the opposite direction. Two large leaps in a row in the
+  same direction are allowed only when together they outline the chord.
+- **Bar 3 reuses the rhythm of bar 1**, with new pitches over its own chord.
+  Repetition is what makes generated material read as composed; only the rhythm
+  repeats, so the pitches stay unfamiliar.
+- **The passage ends on a chord tone on the first beat of bar 4**, preferably
+  the tonic, and the line rises towards the middle and falls towards the end
+  rather than wandering.
 
 ### Surface
 
@@ -124,6 +178,9 @@ compares two files. This buys three things that exact matching cannot:
 | Player gives up partway | Manual end; review covers what was played, remaining bars reported as not attempted |
 | Input drops or corrupts a note | Alignment absorbs it; the attempt continues rather than derailing |
 | Extra notes far outside the passage | Reported as extra notes in the bar where they occurred |
+| Notes meant to sound together are pressed in any order | Accepted as matching; only a note a whole group early or late is out of order |
+| Keys never all released — held left hand, legato, sustain pedal | No effect: what was played is never split by releases |
+| No note at some position satisfies the melody rules | The nearest chord tone is used; generation never stalls or retries |
 | Page reloaded mid-attempt | Passage is restored; the attempt resets to the start |
 | A control binding collides with the generator's range | The generator must not produce that pitch. If the remaining range is too small to generate in, the player is told rather than silently given degenerate passages |
 | Hand would cross the clef boundary | Never generated — see invariants |
@@ -134,8 +191,7 @@ compares two files. This buys three things that exact matching cannot:
 **Always:**
 
 1. The whole passage is visible from the moment it is generated.
-2. The key is derived from the music, never required as user input. The mode
-   must be usable by someone who does not read key signatures.
+2. The key is chosen by the generator, never required as user input.
 3. A manual way to end an attempt always exists, so a stalled attempt can
    always be closed.
 4. Left-hand material stays within the bass staff; right-hand material stays
@@ -183,6 +239,9 @@ will not look alike.
 - Remappable controls for both computer and MIDI keyboards, because keyboard
   sizes differ and a fixed binding would be unusable on a short keyboard.
 - Honest failure reporting rather than silent degradation.
+- Key signatures, with accidentals only for departures from the key.
+- Melody conventions from standard practice: chord tones on strong beats, a
+  step back after a leap, the leading tone resolving to the tonic.
 
 **Deliberately rejected:**
 
@@ -207,7 +266,9 @@ Each with a recommended default, to be settled at specification time or later.
 3. **Which left-hand patterns ship first.** *Default: block chord, broken chord
    and Alberti bass for 4/4; add waltz bass with 3/4.*
 4. **How difficulty maps onto generation.** One control has to drive rhythmic
-   density, interval size, accidental count, range and position shifts together.
+   density, interval size (the largest leap allowed, from a 3rd up to a 6th),
+   accidental count (the number of sharps or flats in the key, and whether
+   minor's raised notes appear), range and position shifts together.
    *Default: a small number of named levels with hand-tuned parameters, rather
    than a continuous scale.*
 5. **When the chord trainer migrates to the notation library,** and whether the
