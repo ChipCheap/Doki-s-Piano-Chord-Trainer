@@ -168,9 +168,9 @@ function midiAddListener(listener) {
     midiListeners.push(listener);
 }
 
-function midiAnnounce(event, note) {
+function midiAnnounce(announcement, note) {
     for (const listener of midiListeners) {
-        if (listener[event]) listener[event](note);
+        if (listener[announcement]) listener[announcement](note);
     }
 }
 
