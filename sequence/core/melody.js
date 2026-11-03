@@ -26,7 +26,7 @@ const SequenceMelody = (() => {
     const MIDI_HIGHEST = 108;
 
     // The obligations a state carries forward, cleared by a rest or a fallback.
-    const RELEASED = { requiredStep: null, mustResolve: false, leapDirection: 0, leapFrom: null };
+    const RELEASED = { requiredStep: null, mustResolve: false, leapDirection: 0, leapFrom: null, leapsInARow: 0 };
 
     function compose(context, random) {
         const { key, chords, rhythm, timeSignature, parameters, boundMidi } = context;
@@ -133,6 +133,8 @@ const SequenceMelody = (() => {
                 let leapFrom = null;
                 if (size >= LARGE_LEAP) {
                     if (!chordTone || !state.previousIsChordTone) continue;
+                    // A third large leap the same way is never allowed.
+                    if (state.leapDirection === direction && state.leapsInARow >= 2) continue;
                     if (state.leapDirection === direction) {
                         const outlines = state.leapFrom && isChordTone(note.bar, state.leapFrom) &&
                             isChordTone(note.bar, previous) &&
@@ -175,6 +177,7 @@ const SequenceMelody = (() => {
                         requiredStep: steps.size ? [...steps][0] : null,
                         mustResolve: all.some(entry => entry.mustResolve),
                         leapDirection: size >= LARGE_LEAP ? direction : 0, leapFrom,
+                        leapsInARow: size < LARGE_LEAP ? 0 : (state.leapDirection === direction ? state.leapsInARow + 1 : 1),
                     };
                     const firstOfCadence = note.bar === chords.length - 1 && note.position === 0;
                     const tonicWeight = firstOfCadence && isTonic(pitch) ? TONIC_PREFERENCE : 1;
@@ -208,7 +211,8 @@ const SequenceMelody = (() => {
             const label = pitch => pitch ? SequencePitch.label(pitch) : '-';
             return [label(state.previous), state.previousIsChordTone, state.previousKind, state.previousDirection,
                     state.afterRest, state.repeatRun,
-                    state.requiredStep, state.mustResolve, state.leapDirection, label(state.leapFrom)].join(',');
+                    state.requiredStep, state.mustResolve, state.leapDirection, label(state.leapFrom),
+                    state.leapsInARow].join(',');
         }
 
         // Only reached when no line at all fits — bound keys crowding the
