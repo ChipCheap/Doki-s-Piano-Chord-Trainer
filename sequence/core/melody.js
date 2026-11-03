@@ -7,8 +7,8 @@
 // The rules are hard; the difficulty weights only decide among what survives.
 //
 // Some choices oblige the next note — a passing tone continues by step, a
-// neighbour returns, a large leap steps back, the leading tone rises to the
-// tonic — and a note near the edge of the range can leave the next chord out
+// neighbour returns, a large leap steps back, the leading tone over the
+// dominant chord rises to the tonic — and a note near the edge of the range can leave the next chord out
 // of reach. So a note is offered only if the rest of the passage can still be
 // completed from it under the same rules. That question is answered once per
 // position and situation and remembered, which keeps it exact and fast.
@@ -21,6 +21,9 @@ const SequenceMelody = (() => {
     const LARGE_LEAP = 3;
     // More of the same pitch in a row than this stops reading as a melody.
     const MOST_IN_A_ROW = 3;
+    // The leading tone only pulls to the tonic as part of the dominant
+    // harmony; elsewhere a line may walk down through it, as C–B–A does.
+    const DOMINANT_NUMERALS = ['V', 'vii°'];
     const TONIC_PREFERENCE = 4;
     const MIDI_LOWEST = 21;
     const MIDI_HIGHEST = 108;
@@ -144,7 +147,9 @@ const SequenceMelody = (() => {
                     leapFrom = previous;
                     requirements.push({ step: step - direction, mustResolve: false });
                 }
-                if (isLeadingTone(pitch)) requirements.push({ step: step + 1, mustResolve: true });
+                if (isLeadingTone(pitch) && DOMINANT_NUMERALS.includes(chords[note.bar].numeral)) {
+                    requirements.push({ step: step + 1, mustResolve: true });
+                }
 
                 const kinds = [];
                 if (chordTone) {
