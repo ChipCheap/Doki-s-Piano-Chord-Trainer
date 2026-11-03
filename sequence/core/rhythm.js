@@ -78,7 +78,9 @@ const SequenceRhythm = (() => {
         const second = pick(choices(MAIN_CELLS[timeSignature], rhythmWeights), random);
         const cadence = pick(choices(CADENCE_CELLS[timeSignature], rhythmWeights), random);
         if (first === null || second === null || cadence === null) return null;
-        return [first, second, first, cadence];
+        // Bar 3 gets its own copy of bar 1's events, so nothing that later marks
+        // or changes one note of a passage can reach a note in another bar.
+        return [first, second, first.map(event => ({ ...event })), cadence];
     }
 
     return { MAIN_CELLS, CADENCE_CELLS, parse, canChoose, choose };

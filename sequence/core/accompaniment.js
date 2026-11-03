@@ -10,8 +10,10 @@ const SequenceAccompaniment = (() => {
     // A pattern's bar, from a voicing (three pitches, low to high), as events
     // { position, duration, pitches }. Notes are picked by voicing index:
     // 0 low, 1 middle, 2 high.
+    // Every event gets its own pitch objects, so a chord struck twice is two
+    // separate notes that can be marked one at a time.
     const note = (position, duration, voicing, ...indices) =>
-        ({ position, duration, pitches: indices.map(index => voicing[index]) });
+        ({ position, duration, pitches: indices.map(index => ({ ...voicing[index] })) });
 
     const PATTERNS = {
         block: {
