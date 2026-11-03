@@ -55,18 +55,21 @@ const SequenceMelody = (() => {
             return midi >= MIDI_LOWEST && midi <= MIDI_HIGHEST && !boundMidi.has(midi);
         };
 
-        // The spelling of a staff step at this point. A note repeated on the
-        // same letter keeps its spelling unless the chord says otherwise.
-        function spell(step, bar, previous) {
+        // The ways a staff step can be spelled here, each with the only kind of
+        // note it can be. A letter of the chord is spelled as the chord spells
+        // it. Any other letter can only be a passing or neighbour tone, and is
+        // spelled by where the line goes next — on in the same direction for a
+        // passing tone, back for a neighbour — which is what decides a minor
+        // key's raised 6th and 7th.
+        function spellings(step, bar, previous) {
             const natural = SequencePitch.fromStep(step, 0);
-            const previousStep = previous ? SequencePitch.diatonicStep(previous) : null;
-            const inChord = tones[bar].some(tone => tone.letter === natural.letter);
-            if (previous && previousStep === step && !inChord) {
-                return SequencePitch.create(natural.letter, previous.alteration, natural.octave);
-            }
-            const direction = previous ? Math.sign(step - previousStep) : 0;
-            return SequencePitch.create(natural.letter,
-                SequenceTheory.melodyAlteration(key, chords[bar], natural.letter, direction), natural.octave);
+            const spellAs = onward => SequencePitch.create(natural.letter,
+                SequenceTheory.melodyAlteration(key, chords[bar], natural.letter, onward), natural.octave);
+            if (tones[bar].some(tone => tone.letter === natural.letter)) return [{ kind: 'chordTone', pitch: spellAs(0) }];
+            if (!previous) return [];
+            const arriving = Math.sign(step - SequencePitch.diatonicStep(previous));
+            if (arriving === 0) return [];
+            return [{ kind: 'passing', pitch: spellAs(arriving) }, { kind: 'neighbour', pitch: spellAs(-arriving) }];
         }
 
         // The line rises towards the middle of the passage and falls to its end.
@@ -107,87 +110,90 @@ const SequenceMelody = (() => {
                     Math.sign(step - SequencePitch.diatonicStep(previous)) === state.leapDirection &&
                     Math.abs(step - SequencePitch.diatonicStep(previous)) >= LARGE_LEAP;
                 if (state.requiredStep !== null && step !== state.requiredStep && !continuesLeap) continue;
-                const pitch = spell(step, note.bar, previous);
-                if (!playable(pitch)) continue;
 
-                let intervalWeight = 100;
-                let size = 0;
-                let direction = 0;
-                if (previous) {
-                    const distance = step - SequencePitch.diatonicStep(previous);
-                    size = Math.abs(distance);
-                    if (size >= PLAIN_SIZES.length) continue;
-                    if (!PLAIN_SIZES[size].includes(Math.abs(SequencePitch.semitones(previous, pitch)))) continue;
-                    intervalWeight = parameters.intervals[INTERVAL_NAMES[size]];
-                    if (intervalWeight <= 0) continue;
-                    direction = Math.sign(distance);
-                }
+                for (const spelling of spellings(step, note.bar, previous)) {
+                    const pitch = spelling.pitch;
+                    if (!playable(pitch)) continue;
 
-                const repeatRun = previous && SequencePitch.equals(previous, pitch) ? state.repeatRun + 1 : 1;
-                if (repeatRun > MOST_IN_A_ROW) continue;
-
-                const chordTone = isChordTone(note.bar, pitch);
-                if (strong && !chordTone) continue;
-
-                // Large leaps run between chord tones and are followed by a
-                // step back — unless a second leap the same way outlines the
-                // chord with the first.
-                const requirements = [];
-                let leapFrom = null;
-                if (size >= LARGE_LEAP) {
-                    if (!chordTone || !state.previousIsChordTone) continue;
-                    // A third large leap the same way is never allowed.
-                    if (state.leapDirection === direction && state.leapsInARow >= 2) continue;
-                    if (state.leapDirection === direction) {
-                        const outlines = state.leapFrom && isChordTone(note.bar, state.leapFrom) &&
-                            isChordTone(note.bar, previous) &&
-                            Math.abs(step - SequencePitch.diatonicStep(state.leapFrom)) <= 7;
-                        if (!outlines) continue;
+                    let intervalWeight = 100;
+                    let size = 0;
+                    let direction = 0;
+                    if (previous) {
+                        const distance = step - SequencePitch.diatonicStep(previous);
+                        size = Math.abs(distance);
+                        if (size >= PLAIN_SIZES.length) continue;
+                        if (!PLAIN_SIZES[size].includes(Math.abs(SequencePitch.semitones(previous, pitch)))) continue;
+                        intervalWeight = parameters.intervals[INTERVAL_NAMES[size]];
+                        if (intervalWeight <= 0) continue;
+                        direction = Math.sign(distance);
                     }
-                    leapFrom = previous;
-                    requirements.push({ step: step - direction, mustResolve: false });
-                }
-                if (isLeadingTone(pitch) && DOMINANT_NUMERALS.includes(chords[note.bar].numeral)) {
-                    requirements.push({ step: step + 1, mustResolve: true });
-                }
 
-                const kinds = [];
-                if (chordTone) {
-                    kinds.push({ kind: 'chordTone', requirement: null });
-                } else {
-                    // Approached by step from the note just before, so never straight after a rest.
-                    if (!previous || state.afterRest || size !== 1 || (long && avoidedWhenLong(note.bar, pitch))) continue;
-                    // A neighbour steps away from a chord tone and back to it. A
-                    // passing tone runs from a chord tone towards the next, and
-                    // may follow another passing tone only going the same way.
-                    const continuesPassing = state.previousKind === 'passing' && state.previousDirection === direction;
-                    if (state.previousIsChordTone || continuesPassing) {
-                        kinds.push({ kind: 'passing', requirement: { step: step + direction, mustResolve: true } });
+                    const repeatRun = previous && SequencePitch.equals(previous, pitch) ? state.repeatRun + 1 : 1;
+                    if (repeatRun > MOST_IN_A_ROW) continue;
+
+                    const chordTone = spelling.kind === 'chordTone';
+                    if (strong && !chordTone) continue;
+
+                    // Large leaps run between chord tones and are followed by a
+                    // step back — unless a second leap the same way outlines the
+                    // chord with the first.
+                    const requirements = [];
+                    let leapFrom = null;
+                    if (size >= LARGE_LEAP) {
+                        if (!chordTone || !state.previousIsChordTone) continue;
+                        // A third large leap the same way is never allowed.
+                        if (state.leapDirection === direction && state.leapsInARow >= 2) continue;
+                        if (state.leapDirection === direction) {
+                            const outlines = state.leapFrom && isChordTone(note.bar, state.leapFrom) &&
+                                isChordTone(note.bar, previous) &&
+                                Math.abs(step - SequencePitch.diatonicStep(state.leapFrom)) <= 7;
+                            if (!outlines) continue;
+                        }
+                        leapFrom = previous;
+                        requirements.push({ step: step - direction, mustResolve: false });
                     }
-                    if (state.previousIsChordTone) {
-                        kinds.push({ kind: 'neighbour', requirement: { step: step - direction, mustResolve: true } });
+                    if (isLeadingTone(pitch) && DOMINANT_NUMERALS.includes(chords[note.bar].numeral)) {
+                        requirements.push({ step: step + 1, mustResolve: true });
                     }
-                }
 
-                for (const { kind, requirement } of kinds) {
-                    const all = requirement ? [...requirements, requirement] : requirements;
-                    const steps = new Set(all.map(entry => entry.step));
-                    if (steps.size > 1) continue;
-                    const beatWeight = strong ? 100 : parameters.weakBeats[kind];
-                    if (beatWeight <= 0) continue;
+                    const kinds = [];
+                    if (chordTone) {
+                        kinds.push({ kind: 'chordTone', requirement: null });
+                    } else {
+                        // Approached by step from the note just before, so never straight after a rest.
+                        if (!previous || state.afterRest || size !== 1 || (long && avoidedWhenLong(note.bar, pitch))) continue;
+                        // A neighbour steps away from a chord tone and back to it. A
+                        // passing tone runs from a chord tone towards the next, and
+                        // may follow another passing tone only going the same way.
+                        const continuesPassing = state.previousKind === 'passing' && state.previousDirection === direction;
+                        if (spelling.kind === 'passing' && (state.previousIsChordTone || continuesPassing)) {
+                            kinds.push({ kind: 'passing', requirement: { step: step + direction, mustResolve: true } });
+                        }
+                        if (spelling.kind === 'neighbour' && state.previousIsChordTone) {
+                            kinds.push({ kind: 'neighbour', requirement: { step: step - direction, mustResolve: true } });
+                        }
+                    }
 
-                    const next = {
-                        previous: pitch, previousIsChordTone: chordTone, previousKind: kind,
-                        previousDirection: direction, afterRest: false, repeatRun,
-                        requiredStep: steps.size ? [...steps][0] : null,
-                        mustResolve: all.some(entry => entry.mustResolve),
-                        leapDirection: size >= LARGE_LEAP ? direction : 0, leapFrom,
-                        leapsInARow: size < LARGE_LEAP ? 0 : (state.leapDirection === direction ? state.leapsInARow + 1 : 1),
-                    };
-                    const firstOfCadence = note.bar === chords.length - 1 && note.position === 0;
-                    const tonicWeight = firstOfCadence && isTonic(pitch) ? TONIC_PREFERENCE : 1;
-                    result.push({ pitch, state: next,
-                                  weight: intervalWeight * beatWeight * contour(index, step) * tonicWeight });
+                    for (const { kind, requirement } of kinds) {
+                        const all = requirement ? [...requirements, requirement] : requirements;
+                        const steps = new Set(all.map(entry => entry.step));
+                        if (steps.size > 1) continue;
+                        const beatWeight = strong ? 100 : parameters.weakBeats[kind];
+                        if (beatWeight <= 0) continue;
+
+                        const next = {
+                            previous: pitch, previousIsChordTone: chordTone, previousKind: kind,
+                            previousDirection: direction, afterRest: false, repeatRun,
+                            requiredStep: steps.size ? [...steps][0] : null,
+                            mustResolve: all.some(entry => entry.mustResolve),
+                            leapDirection: size >= LARGE_LEAP ? direction : 0, leapFrom,
+                            leapsInARow: size < LARGE_LEAP ? 0 : (state.leapDirection === direction ? state.leapsInARow + 1 : 1),
+                        };
+                        const firstOfCadence = note.bar === chords.length - 1 && note.position === 0;
+                        const tonicWeight = firstOfCadence && isTonic(pitch) ? TONIC_PREFERENCE : 1;
+                        result.push({ pitch, state: next,
+                                      weight: intervalWeight * beatWeight * contour(index, step) * tonicWeight });
+                    }
                 }
             }
             return result;
@@ -241,8 +247,10 @@ const SequenceMelody = (() => {
             };
             let best = null;
             for (let step = range.low; step <= range.high; step++) {
-                const pitch = spell(step, note.bar, previous);
-                if (!playable(pitch) || !isChordTone(note.bar, pitch)) continue;
+                const chordSpelling = spellings(step, note.bar, null)[0];
+                if (!chordSpelling) continue;
+                const pitch = chordSpelling.pitch;
+                if (!playable(pitch)) continue;
                 if (!best || cost(pitch) < cost(best)) best = pitch;
             }
             return best;
