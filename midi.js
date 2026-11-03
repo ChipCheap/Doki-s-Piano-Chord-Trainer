@@ -19,6 +19,45 @@ function midiResetIdleTimer() {
 const MIDI_NOTE_MIN = 21;  // A0
 const MIDI_NOTE_MAX = 108; // C8
 
+// ── Raw message log ───────────────────────────
+// Off by default. Flaky cables and adapters corrupt individual bytes, and when
+// a note-on arrives with a mangled note number its note-off never matches — the
+// note is then stuck in the chord with nothing to remove it. That is invisible
+// in the app's own display and only shows up in the raw stream.
+const MIDI_DEBUG_MAX = 60;
+let midiDebugOn = false;
+let midiDebugTotal = 0;
+let midiDebugOrphans = 0;
+let midiDebugDirty = false;
+const midiDebugLines = [];
+
+function midiDebugRecord(data, text, suspect) {
+    midiDebugTotal++;
+    if (!midiDebugOn) return;
+    const hex = [...data].map(b => b.toString(16).padStart(2, '0')).join(' ');
+    // Explicit space after the pad so the longest message still separates from
+    // the hex column instead of running into it.
+    midiDebugLines.push((suspect ? '! ' : '  ') + text.padEnd(40) + ' ' + hex);
+    if (midiDebugLines.length > MIDI_DEBUG_MAX) midiDebugLines.shift();
+    // Aftertouch streams can arrive faster than the display needs updating, so
+    // coalesce writes to one per frame.
+    if (!midiDebugDirty) {
+        midiDebugDirty = true;
+        requestAnimationFrame(midiDebugRender);
+    }
+}
+
+function midiDebugRender() {
+    midiDebugDirty = false;
+    if (!midiDebugOn) return;
+    const log = document.getElementById('midiDebugLog');
+    log.textContent = midiDebugLines.join('\n');
+    log.scrollTop = log.scrollHeight;
+    document.getElementById('midiDebugSummary').textContent =
+        midiDebugTotal + ' messages · ' + midiDebugOrphans +
+        ' unmatched note-off' + (midiDebugOrphans === 1 ? '' : 's');
+}
+
 function initMidi() {
     if (!navigator.requestMIDIAccess) { midiSetStatus('unavailable'); return; }
     navigator.requestMIDIAccess().then(access => {
@@ -37,21 +76,48 @@ function attachMidiInputs(access) {
 }
 
 function onMidiMessage(event) {
-    const [status, note, velocity] = event.data;
+    const data = event.data;
+    const [status, note, velocity] = data;
     const type = status & 0xf0;
+    const ch = (status & 0x0f) + 1;
 
     if (type === 0x90 && velocity > 0) {
-        if (note < MIDI_NOTE_MIN || note > MIDI_NOTE_MAX) return;
+        if (note < MIDI_NOTE_MIN || note > MIDI_NOTE_MAX) {
+            midiDebugRecord(data, 'ch' + ch + ' note-on ' + note + ' v' + velocity + ' — out of range', true);
+            return;
+        }
+        midiDebugRecord(data, 'ch' + ch + ' note-on ' + note + ' v' + velocity, false);
         midiSustainPending.delete(note);
         midiHeldNotes.add(note);
         practiceResetAdvanceTimer();
 
     } else if (type === 0x80 || (type === 0x90 && velocity === 0)) {
-        if (note < MIDI_NOTE_MIN || note > MIDI_NOTE_MAX) return;
+        if (note < MIDI_NOTE_MIN || note > MIDI_NOTE_MAX) {
+            midiDebugRecord(data, 'ch' + ch + ' note-off ' + note + ' — out of range', true);
+            return;
+        }
+        // A note-off for a note that was never on means its note-on was lost or
+        // carried a corrupted note number. Counted whether or not the log is
+        // showing, so switching Debug on reveals a history rather than nothing.
+        const orphan = !midiHeldNotes.has(note) && !midiSustainPending.has(note);
+        if (orphan) midiDebugOrphans++;
+        midiDebugRecord(data, 'ch' + ch + ' note-off ' + note +
+                        (orphan ? ' — no matching note-on' : ''), orphan);
+
         if (midiSustainHeld) midiSustainPending.add(note);
         else midiHeldNotes.delete(note);
 
+    } else if (type === 0xa0) {
+        // Polyphonic key pressure is only produced by a key that is physically
+        // down, so it is evidence the note is still held. Without counting it,
+        // the idle timeout fires mid-chord on a keyboard that streams
+        // aftertouch. No display update: it changes nothing that is drawn.
+        midiDebugRecord(data, 'ch' + ch + ' aftertouch ' + note + ' ' + velocity, false);
+        midiResetIdleTimer();
+        return;
+
     } else if (type === 0xb0) {
+        midiDebugRecord(data, 'ch' + ch + ' CC ' + note + ' ' + velocity, false);
         if (note === 64) {
             if (velocity >= 64) {
                 midiSustainHeld = true;
@@ -63,9 +129,14 @@ function onMidiMessage(event) {
         } else if (note === 120 || note === 123) {
             midiPanic();
         }
+        // Deliberately does not reset the idle timeout: a pedal or knob says
+        // nothing about which keys are down, and letting it hold the timeout
+        // open would stop stuck notes from ever being cleared.
         return;
 
     } else {
+        // Clock, active sensing and SysEx arrive constantly on some devices and
+        // carry no information about held keys.
         return;
     }
 
@@ -140,5 +211,37 @@ function redrawPiano() {
     const hideChord = document.getElementById('hideChordCheckbox').checked;
     drawPiano(pianoCanvas, currentChordNotes, midiHeldNotes, hideChord);
 }
+
+// ── Panel controls ────────────────────────────
+document.getElementById('midiResetBtn').addEventListener('click', () => {
+    midiPanic();
+    // Also drop whatever the current practice attempt accumulated, or a stuck
+    // note would still be counted against you when the attempt is captured.
+    if (typeof practicePeakHeld !== 'undefined') practicePeakHeld.clear();
+});
+
+const midiDebugCheckbox = document.getElementById('midiDebugCheckbox');
+const midiDebugPanel    = document.getElementById('midiDebug');
+
+function midiApplyDebugVisibility() {
+    midiDebugOn = midiDebugCheckbox.checked;
+    midiDebugPanel.hidden = !midiDebugOn;
+    midiDebugRender();
+}
+
+midiDebugCheckbox.addEventListener('change', () => {
+    writeStored('pianoChordMidiDebug', midiDebugCheckbox.checked ? '1' : '0');
+    midiApplyDebugVisibility();
+});
+
+document.getElementById('midiDebugClearBtn').addEventListener('click', () => {
+    midiDebugLines.length = 0;
+    midiDebugTotal = 0;
+    midiDebugOrphans = 0;
+    midiDebugRender();
+});
+
+midiDebugCheckbox.checked = readStored('pianoChordMidiDebug') === '1';
+midiApplyDebugVisibility();
 
 initMidi();

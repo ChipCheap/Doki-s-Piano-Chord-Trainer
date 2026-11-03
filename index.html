@@ -166,6 +166,13 @@
     <span class="midi-label">MIDI Input</span>
     <span id="midiStatus">Connecting…</span>
     <span id="midiDeviceName" class="midi-device"></span>
+    <label class="midi-debug-toggle">
+      <input type="checkbox" id="midiDebugCheckbox" />
+      <span>Debug</span>
+    </label>
+    <button id="midiResetBtn" class="midi-reset-btn"
+            title="Clear notes stuck by a missed or corrupted note-off"
+            aria-label="Clear stuck notes">⟲ Reset</button>
   </div>
   <div class="midi-body">
     <div class="midi-row">
@@ -173,6 +180,22 @@
       <span id="midiHeldNotes" class="midi-held">—</span>
     </div>
     <div id="midiResult" class="midi-result idle">Play the chord…</div>
+
+    <!-- Raw message view. A corrupted note-on paired with a correct note-off
+         leaves a note stuck forever, and that is only visible in the raw stream. -->
+    <div id="midiDebug" class="midi-debug" hidden>
+      <div class="midi-debug-head">
+        <span id="midiDebugSummary">No messages yet.</span>
+        <button id="midiDebugClearBtn" class="midi-debug-clear">Clear log</button>
+      </div>
+      <pre id="midiDebugLog" class="midi-debug-log"></pre>
+      <p class="midi-debug-hint">
+        Lines marked <strong>!</strong> are suspect. A note-off with no matching
+        note-on means its note-on was lost or arrived with a corrupted note
+        number — the cause of notes sticking in the chord. (Expect one after
+        pressing Reset while keys are down.)
+      </p>
+    </div>
   </div>
 </div>
 

@@ -275,6 +275,7 @@
     .midi-header {
       display: flex;
       align-items: center;
+      flex-wrap: wrap;
       gap: 10px;
       margin-bottom: 14px;
     }
@@ -294,6 +295,10 @@
       font-size: 0.75rem;
       color: #9a7040;
       margin-left: auto;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
     .midi-dot {
       width: 10px;
@@ -903,4 +908,79 @@
 
     @media (max-width: 620px) {
       .practice-layout-label { display: none; }
+    }
+
+    /* ── MIDI PANEL CONTROLS ── */
+    /* .midi-device already carries margin-left:auto, which pushes it and
+       everything after it to the right edge as one group. A second auto margin
+       here would split the free space instead. */
+    .midi-debug-toggle {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.75rem;
+      color: #7a6040;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .midi-debug-toggle input { cursor: pointer; }
+    .midi-reset-btn {
+      font-family: 'IM Fell English', serif;
+      font-size: 0.78rem;
+      padding: 3px 10px;
+      background: transparent;
+      color: #9a7040;
+      border: 1px solid rgba(200,169,110,0.5);
+      border-radius: var(--radius);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+    .midi-reset-btn:hover { border-color: var(--red-accent); color: var(--red-accent); }
+
+    .midi-debug {
+      margin-top: 12px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(200,169,110,0.35);
+    }
+    .midi-debug[hidden] { display: none !important; }
+    .midi-debug-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 6px;
+      font-size: 0.75rem;
+      color: #7a6040;
+    }
+    .midi-debug-clear {
+      font-family: 'IM Fell English', serif;
+      font-size: 0.72rem;
+      padding: 2px 8px;
+      background: transparent;
+      color: #9a7040;
+      border: 1px solid rgba(200,169,110,0.5);
+      border-radius: var(--radius);
+      cursor: pointer;
+    }
+    .midi-debug-clear:hover { border-color: var(--red-accent); color: var(--red-accent); }
+    .midi-debug-log {
+      font-family: 'Source Code Pro', monospace;
+      font-size: 0.68rem;
+      line-height: 1.5;
+      margin: 0;
+      max-height: 190px;
+      overflow: auto;
+      white-space: pre;
+      background: #efe7d8;
+      border: 1px solid rgba(200,169,110,0.4);
+      border-radius: var(--radius);
+      padding: 8px 10px;
+      color: #3a2f22;
+    }
+    .midi-debug-hint {
+      font-size: 0.72rem;
+      line-height: 1.45;
+      color: #7a6040;
+      margin: 8px 0 0;
     }
