@@ -27,12 +27,16 @@ direction is what lets a second mode arrive without disturbing the first.
 4. **New script files expose exactly one global name** — a namespace object —
    and keep everything else private inside the file. Existing chord-trainer
    files keep their globals until a change touches them for another reason;
-   they are not converted for its own sake.
+   they are not converted for its own sake. A new file that only relocates
+   existing chord-trainer code keeps that code's global names. Code guidelines
+   give way where keeping the chord trainer working normally requires it.
 5. **Load order on each page is: shared modules, then the mode's core, then the
    mode's shell.** A file uses only names from files loaded before it.
 6. **All `localStorage` access goes through the shared storage helpers.** Each
-   mode uses its own keys. Stored structures carry a version number; renaming
-   or reshaping a stored field bumps it and adds a converter, in its own commit.
+   mode uses its own keys. Stored structures carry a version number. Renaming
+   or reshaping a stored settings field bumps it and adds a converter, in its
+   own commit. Stored work that is cheap to recreate — such as a generated
+   passage — is discarded on a version mismatch instead of converted.
 7. **Every file a page needs offline is in the service worker's asset list**,
    and the cache name is bumped in the same change that adds, removes or
    renames a served file.

@@ -34,10 +34,13 @@ over months of use.
   then built in it. The player is never asked for a key.
 - The passage is written with the key's signature; accidentals appear only where
   a note leaves the key, as in printed music.
-- Minor keys use **harmonic minor for the chords** (raised seventh, so V is
-  major and vii° diminished) and **melodic minor for stepwise right-hand lines**
-  (6th and 7th raised going up, unraised going down). This keeps the augmented
-  second between the 6th and the raised 7th out of the melody.
+- Minor keys build their chords from natural minor, except that the **dominant
+  chords V and vii° take the raised seventh**, which is what pulls the music
+  back to the tonic. III and VII keep the natural seventh, as in i–VI–III–VII.
+  **Stepwise right-hand lines use melodic minor** (6th and 7th raised going up,
+  unraised going down), except that the melody always matches the seventh of
+  the chord underneath it. This keeps the augmented second between the 6th and
+  the raised 7th out of the melody.
 - Left hand plays one accompaniment pattern per passage, from a small set of
   standard figures (block chord, broken chord, Alberti bass, waltz bass,
   root–fifth).
@@ -60,6 +63,13 @@ over months of use.
 - Playback of the passage, available only once an attempt has finished.
 - Mode-specific settings: difficulty, time signature, left-hand pattern, and
   remappable control bindings for both computer keyboard and MIDI keyboard.
+  Difficulty is tunable in detail, as the chord trainer's randomiser is, with
+  named presets as starting points.
+
+**Priority.** Generating good material and notating it is the core of this mode.
+The per-bar review is a bonus on top of the whole-passage check: if alignment
+does not give satisfying results in practice, the whole-passage check is the
+review, and an attempt ends with done.
 
 ### Out
 
@@ -78,27 +88,30 @@ over months of use.
 
 ### States and transitions
 
-```
-no passage ──generate──▶ passage shown ──first note played──▶ attempt
-                           ▲      ▲                              │
-                           │      │                 done, or alignment
-                           │      │                 reaches the end
-                           │      │                              ▼
-                           │      └───retry (same passage)───  review
-                           │                                     │
-                           └──────generate (new passage)─────────┘
-```
+| From | Action | To |
+|---|---|---|
+| no passage | generate | passage shown |
+| passage shown | generate | passage shown, with a new passage |
+| passage shown | first note played | attempt |
+| attempt | done, or alignment reaches the end | review |
+| attempt | retry | passage shown, same passage, attempt discarded |
+| review | retry | passage shown, same passage |
+| review | generate | passage shown, with a new passage |
+
+Generate is not available during an attempt: the attempt is ended with done
+first, so the manual exit stays the one way out of an attempt.
 
 - The **whole passage is visible from the start.** It never advances, scrolls or
   reveals itself progressively — reading the page is the skill being practised.
 - An attempt ends either when the alignment has consumed the whole passage, or
   when the player ends it manually. The manual exit always exists.
 - **Review** reports, per bar: notes missed, notes played that were not in the
-  passage, and notes played out of order. If every pitch class matched under a
-  uniform octave shift, that is reported once as a single octave displacement
-  rather than as a page of wrong notes.
-- **Retry** replays the same passage from the start, discarding the previous
-  attempt. **Generate** produces new material.
+  passage, and notes played out of order. If shifting everything played by the
+  same number of octaves explains clearly more of the passage than leaving it
+  unshifted, the shift is reported once as a single octave displacement and the
+  remaining notes are judged as shifted, rather than as a page of wrong notes.
+- **Retry** starts the same passage again from the beginning, discarding the
+  current or previous attempt. **Generate** produces new material.
 
 ### Why alignment rather than matching
 
@@ -173,7 +186,7 @@ them. How that is done is a matter for specification.
 
 | Case | Decided behaviour |
 |---|---|
-| Passage played correctly but an octave off | Detected and reported once as octave displacement, not as every note wrong |
+| Passage played an octave off, with or without a few slips | Reported once as octave displacement; the slips are reported as usual, judged as shifted |
 | The same pitch repeats and one is missed | Reported as one missing instance in that bar. Which instance cannot be determined without timing — an accepted limit of alignment |
 | Player gives up partway | Manual end; review covers what was played, remaining bars reported as not attempted |
 | Input drops or corrupts a note | Alignment absorbs it; the attempt continues rather than derailing |
@@ -182,6 +195,7 @@ them. How that is done is a matter for specification.
 | Keys never all released — held left hand, legato, sustain pedal | No effect: what was played is never split by releases |
 | No note at some position satisfies the melody rules | The nearest chord tone is used; generation never stalls or retries |
 | Page reloaded mid-attempt | Passage is restored; the attempt resets to the start |
+| Saved passage is from an older version of the app | Discarded; the mode opens in its empty state |
 | A control binding collides with the generator's range | The generator must not produce that pitch. If the remaining range is too small to generate in, the player is told rather than silently given degenerate passages |
 | Hand would cross the clef boundary | Never generated — see invariants |
 | Playback requested before an attempt | Not offered |

@@ -33,10 +33,11 @@ from a spelling, never the other way round.
    it. A position with no allowed note takes the nearest chord tone. A range too
    small to generate in is returned as a reported failure, never as a degenerate
    passage.
-6. **Difficulty is a hand-tuned table of named levels**, each a plain set of
-   parameters (largest leap, keys allowed, rhythm values and so on). The
-   generator reads parameters, never level names. A table of data, not a rules
-   engine — that is what keeps it at complexity 2.
+6. **Difficulty is a plain set of tunable parameters** — weights and limits,
+   such as how likely each interval or rhythm value is, which keys are allowed
+   and each hand's range. Named presets fill them in as starting points. The
+   generator reads parameters, never preset names. Weighted choices over data,
+   not a rules engine — that is what keeps it at complexity 2.
 7. **Only the notation adapter refers to the notation library.**
 8. **Only the state owner changes the mode's state, and only along the
    framework's transitions.** Everything shown — including whether playback is
@@ -191,7 +192,8 @@ generator ─▶ passage ─┬─▶ notation adapter                   │
 
 - **Chosen:** the passage itself, plus the settings, under Sequence Mode's own
   versioned keys. On reload the passage is restored and the attempt starts over,
-  as the framework decides.
+  as the framework decides. A passage saved under an older version is discarded
+  and the mode opens empty (`architecture.md` guideline 6).
 - **Why:** what comes back is exactly what was on screen, whatever has changed in
   the generator since.
 - **Drawbacks:** a few kilobytes of `localStorage`.
@@ -208,7 +210,7 @@ The seams the framework calls for, and no more:
 - **Left-hand patterns** — entries in a list, each declaring the time signatures
   it fits.
 - **Progression templates** — entries in a list per major and minor.
-- **Difficulty levels** — rows in the parameter table (guideline 6).
+- **Difficulty presets** — named sets of parameter values (guideline 6).
 
 ## Relation to project architecture
 
