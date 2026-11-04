@@ -33,9 +33,13 @@ const SequenceBindings = (() => {
         else hooks.note(note);
     }
 
+    // Only fields that take typed text; a checkbox or slider with the focus
+    // does not stop the controls.
+    const TEXT_INPUT_TYPES = ['text', 'search', 'email', 'number', 'password', 'tel', 'url'];
     function isTyping(target) {
-        return target instanceof HTMLElement &&
-            (target.isContentEditable || ['INPUT', 'SELECT', 'TEXTAREA'].includes(target.tagName));
+        if (!(target instanceof HTMLElement)) return false;
+        if (target.isContentEditable || target.tagName === 'SELECT' || target.tagName === 'TEXTAREA') return true;
+        return target.tagName === 'INPUT' && TEXT_INPUT_TYPES.includes(target.type);
     }
 
     function isActivatable(target) {
