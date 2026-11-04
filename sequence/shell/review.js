@@ -7,12 +7,7 @@
 // hand anything belongs to, and nothing about timing. Passage notes are named
 // by their spelling; played keys, which have none, by both of their names.
 const SequenceReview = (() => {
-    function element(tag, className, text) {
-        const node = document.createElement(tag);
-        if (className) node.className = className;
-        if (text !== undefined) node.textContent = text;
-        return node;
-    }
+    const element = SequenceDisplay.element;
 
     // Fills `container` with the review of `played` against `passage`, and
     // returns the marks for the notation: each passage pitch → 'cameUp' or

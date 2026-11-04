@@ -29,12 +29,7 @@ const SequenceSettingsPanel = (() => {
         methods: { computer: 'Computer key', midi: 'MIDI key' },
     };
 
-    function element(tag, className, text) {
-        const node = document.createElement(tag);
-        if (className) node.className = className;
-        if (text !== undefined) node.textContent = text;
-        return node;
-    }
+    const element = SequenceDisplay.element;
 
     // Any change: keep the preset picker honest, then let the page react.
     function changed() {
@@ -47,7 +42,7 @@ const SequenceSettingsPanel = (() => {
     function showWarning() {
         const problem = SequenceGenerator.problems(hooks.settings(), hooks.boundMidi());
         warning.hidden = problem === null;
-        if (problem) warning.textContent = problem.message + (problem.keys.length ? ' ' + problem.keys.map(midiKeyLabel).join(', ') : '');
+        if (problem) warning.textContent = SequenceDisplay.failureText(problem);
     }
 
     // ── Rows ──────────────────────────────────

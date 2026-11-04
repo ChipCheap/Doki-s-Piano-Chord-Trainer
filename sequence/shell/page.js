@@ -26,8 +26,6 @@
         review: 'Retry the same passage, or generate a new one.',
     };
 
-    const describe = problem => problem.message + (problem.keys.length ? ' ' + problem.keys.map(midiKeyLabel).join(', ') : '');
-
     // Browsers keep sound off until the page has been clicked or a computer
     // key pressed, and a MIDI key does not count. The first click or key
     // turns it on. Play pressed from the MIDI keyboard before that asks for
@@ -64,13 +62,13 @@
     // a passage, then a passage that uses a key since bound to a control;
     // otherwise a hint.
     function statusMessage(view) {
-        if (view.problem) return { problem: true, text: describe(view.problem) };
+        if (view.problem) return { problem: true, text: SequenceDisplay.failureText(view.problem) };
         if (soundBlocked) {
             return { problem: true, text: 'The browser has not allowed sound yet: click anywhere on the page, or press ' +
                 'a key on the computer keyboard, once, and the passage will play.' };
         }
         const settingsProblem = SequenceGenerator.problems(settings, boundMidi());
-        if (settingsProblem) return { problem: true, text: 'Settings: ' + describe(settingsProblem) };
+        if (settingsProblem) return { problem: true, text: 'Settings: ' + SequenceDisplay.failureText(settingsProblem) };
         if (view.passage && (view.state === 'shown' || view.state === 'attempt')) {
             const bound = boundMidi();
             const clashes = new Set(SequencePassage.groups(view.passage).flatMap(group =>
