@@ -180,9 +180,14 @@ them. How that is done is a matter for specification.
 - An optional reading aid, remembered: each bar's chord named above it, as on a
   lead sheet. Off by default.
 - Controls for generate, done and retry; playback appears only after an attempt.
-- After an attempt: one line saying how much of the passage came up, the
-  passage marked note by note, and a grand staff of the passage notes that were
-  played, in the order played and spelled as the passage spells them. Keys the
+- After an attempt: one line of counts — right, wrong notes, out of order,
+  missed, not reached, and an octave displacement if there was one — the
+  passage marked note by note to match (a symbol for every kind of mistake, not
+  colour alone), and a grand staff of the passage notes that were played, in
+  the order played and spelled as the passage spells them. A key within two
+  semitones of a written note it stands in place of counts as a wrong note
+  instead of it. A checkbox switches to the simpler count of which notes came
+  up in any order. Keys the
   passage does not have are named, not drawn: a played key has no spelling of
   its own.
 - An optional live aid, remembered and off by default: that played staff
