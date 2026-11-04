@@ -158,5 +158,32 @@ const SequenceComparison = (() => {
         };
     }
 
-    return { wholePassage, align };
+    // ── Octave displacement ───────────────────
+    // The whole attempt aligned as played and shifted by one or two octaves
+    // either way. A shift is reported when it explains at least half the
+    // attempted notes and clearly more than playing it as written does — one
+    // and a half times as many matches; everything is then judged as shifted.
+    // octaveShift says how the attempt was played: +1 an octave higher than
+    // written, −1 an octave lower, 0 as written.
+    const OCTAVE_SHIFTS = [-2, -1, 1, 2];
+    const SHIFT_SHARE = 0.5;
+    const SHIFT_GAIN = 1.5;
+
+    function compare(passage, played) {
+        const matchedCount = result => result.notes.filter(note => note.status === 'matched').length;
+        const plain = align(passage, played);
+        let shifted = null, octaves = 0;
+        for (const shift of OCTAVE_SHIFTS) {
+            const candidate = align(passage, played.map(midi => midi + 12 * shift));
+            if (!shifted || matchedCount(candidate) > matchedCount(shifted)) { shifted = candidate; octaves = shift; }
+        }
+        const attempted = shifted.notes.filter(note => note.status !== 'notAttempted').length;
+        const displaced = matchedCount(shifted) >= attempted * SHIFT_SHARE && matchedCount(shifted) >= matchedCount(plain) * SHIFT_GAIN &&
+                          matchedCount(shifted) > 0;
+        if (!displaced) return { ...plain, octaveShift: 0 };
+        shifted.played.forEach((key, index) => { key.midi = played[index]; });
+        return { ...shifted, octaveShift: -octaves };
+    }
+
+    return { wholePassage, align, compare };
 })();
