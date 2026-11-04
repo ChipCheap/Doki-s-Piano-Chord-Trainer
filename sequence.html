@@ -21,6 +21,7 @@
   <h1>Doki's Piano <span>Sequence</span> Trainer</h1>
   <p class="subtitle">Read four bars and play them!</p>
   <a class="mode-link" href="index.html">← Chord Trainer</a>
+  <button id="settingsBtn" class="settings-btn" title="Settings" aria-label="Settings">&#9881;</button>
 </header>
 
 <div class="app-panes">
@@ -85,6 +86,18 @@
 
 </div><!-- /.app-panes -->
 
+<!-- SETTINGS: built by settings-panel.js -->
+<div id="settingsModal" style="display:none;">
+  <div class="settings-panel" role="dialog" aria-modal="true" aria-labelledby="spTitle">
+    <div class="sp-header">
+      <h2 class="sp-title" id="spTitle">Settings</h2>
+      <button class="sp-close" id="spCloseBtn" aria-label="Close settings">✕</button>
+    </div>
+    <p id="spWarning" class="sp-empty-warning" role="status" hidden></p>
+    <div id="spBody"></div>
+  </div>
+</div>
+
 <!-- Load order matters: shared modules, then the core, then the shell — each
      file uses only names from files loaded before it -->
 <script src="storage.js"></script>
@@ -106,6 +119,8 @@
 <script src="sequence/shell/store.js"></script>
 <script src="sequence/shell/playback.js"></script>
 <script src="sequence/shell/state.js"></script>
+<script src="sequence/shell/bindings.js"></script>
+<script src="sequence/shell/settings-panel.js"></script>
 <script src="sequence/shell/page.js"></script>
 </body>
 </html>

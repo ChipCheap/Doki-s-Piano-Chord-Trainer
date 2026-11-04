@@ -55,3 +55,43 @@ button[hidden] { display: none; }
   position: relative;
 }
 .sequence-review[hidden] { display: none; }
+
+/* ── SETTINGS PANEL ── */
+#spBody { padding: 8px 24px 24px; }
+#spWarning { margin-top: 14px; }
+#spBody > .sp-row { margin: 12px 0 4px; }
+.sq-section { padding: 6px 0; border-bottom: 1px solid rgba(200,169,110,0.25); }
+.sq-section-toggle {
+  display: flex; align-items: center; gap: 8px;
+  width: 100%;
+  background: transparent; border: none; padding: 8px 0;
+  text-align: left;
+}
+.sq-section-toggle:hover .sp-section-title { color: var(--red-accent); }
+.sq-arrow { width: 1em; color: #9a7040; }
+.sq-section-body { padding: 2px 0 10px; }
+.sq-section-body[hidden] { display: none; }
+/* The shared rows leave a first column for a checkbox; these have none. */
+.sp-row.sq-plain-row { grid-template-columns: 1fr 36px 140px; }
+.sp-row.sq-select-row { grid-template-columns: 1fr auto; }
+.sq-select-row select { font-size: 0.9rem; padding: 4px 28px 4px 10px; }
+
+.sq-bindings {
+  display: grid;
+  grid-template-columns: auto 1fr 1fr;
+  gap: 8px 14px;
+  align-items: center;
+  font-size: 0.92rem;
+}
+.sq-bindings-head { font-size: 0.68rem; letter-spacing: 0.12em; text-transform: uppercase; color: #7a6040; }
+.sq-binding { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.sq-binding-key {
+  min-width: 3.2em;
+  font-family: 'Source Code Pro', monospace;
+  font-size: 0.85rem;
+}
+.sq-binding-button { font-size: 0.8rem; padding: 3px 9px; }
+@media (max-width: 520px) {
+  .sq-bindings { grid-template-columns: 1fr; }
+  .sq-bindings-head { display: none; }
+}
