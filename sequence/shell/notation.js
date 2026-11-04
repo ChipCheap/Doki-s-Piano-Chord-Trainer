@@ -9,17 +9,21 @@
 const SequenceNotation = (() => {
     const Flow = Vex.Flow;
 
-    // One system of four bars from this width up; two systems of two below it.
+    // One system of four bars from this width up, when every bar fits its
+    // quarter; otherwise two systems of two — never one bar at a time.
     const ONE_SYSTEM_FROM = 760;
-    // Drawing coordinates are laid out at least this wide and then scaled to
-    // the container, so a phone gets a smaller passage rather than a cramped or
-    // scrolling one.
+    // Drawing coordinates are laid out at least this wide, or wider if two
+    // bars need it, and then scaled to the container, so a phone gets a
+    // smaller passage rather than a cramped or scrolling one.
     const LAYOUT_MIN_WIDTH = 620;
-    const SYSTEM_HEIGHT = 230;
+    // Tall enough for the hand ranges difficulty.js allows: three ledger
+    // lines above the treble staff, two below the bass.
+    const SYSTEM_HEIGHT = 240;
     const STAFF_GAP = 105;
-    const MARGIN = 12;
-    // The first bar of a system also carries clefs, key and time signatures.
-    const OPENING_EXTRA = { withSignature: 120, withoutSignature: 70 };
+    const MARGIN = 16;
+    // Room a bar's notes need beyond VexFlow's own minimum, so neighbouring
+    // notes and accidentals never touch.
+    const BAR_PADDING = 30;
 
     // Dotted values carry the dot in the duration, which is what gives them
     // their length; the drawn dot is attached separately.
@@ -78,13 +82,67 @@ const SequenceNotation = (() => {
         });
     }
 
+    // Both staves of one bar as VexFlow voices, with their beams.
+    function barVoices(passage, bar, marks, meter) {
+        const beamGroups = [new Flow.Fraction(meter.beamLength, 8)];
+        const rightNotes = staffNotes(passage, bar.right, 'right', marks);
+        const leftNotes = staffNotes(passage, bar.left, 'left', marks);
+        const timing = { num_beats: meter.beats, beat_value: meter.beatValue };
+        return {
+            voices: [new Flow.Voice(timing).addTickables(rightNotes), new Flow.Voice(timing).addTickables(leftNotes)],
+            beams: [...Flow.Beam.generateBeams(rightNotes, { groups: beamGroups }),
+                    ...Flow.Beam.generateBeams(leftNotes, { groups: beamGroups })],
+        };
+    }
+
+    // The narrowest a bar's notes can be set without colliding, measured on
+    // a copy of its notes so the drawn ones are formatted only once.
+    function minimumWidth(passage, bar, meter) {
+        const { voices } = barVoices(passage, bar, null, meter);
+        const formatter = new Flow.Formatter().joinVoices([voices[0]]).joinVoices([voices[1]]);
+        return formatter.preCalculateMinTotalWidth(voices) + BAR_PADDING;
+    }
+
+    function staves(passage, meter, x, top, width, opening, withTime) {
+        const treble = new Flow.Stave(x, top, width);
+        const bass = new Flow.Stave(x, top + STAFF_GAP, width);
+        if (opening) {
+            treble.addClef('treble').addKeySignature(signatureName(passage.key));
+            bass.addClef('bass').addKeySignature(signatureName(passage.key));
+            if (withTime) {
+                treble.addTimeSignature(meter.beats + '/' + meter.beatValue);
+                bass.addTimeSignature(meter.beats + '/' + meter.beatValue);
+            }
+        }
+        // Both staves start their notes at the same x, so the hands line up
+        // even though a treble and a bass clef differ in width.
+        const noteStart = Math.max(treble.getNoteStartX(), bass.getNoteStartX());
+        treble.setNoteStartX(noteStart);
+        bass.setNoteStartX(noteStart);
+        return { treble, bass };
+    }
+
+    // How much wider than a plain bar a system's first bar is, for its clefs,
+    // key signature and — on the first system — time signature.
+    function openingWidth(passage, meter, withTime) {
+        const plain = staves(passage, meter, 0, 0, 500, false, false).treble.getNoteStartX();
+        return staves(passage, meter, 0, 0, 500, true, withTime).treble.getNoteStartX() - plain;
+    }
+
     // Draws `passage` into `container`, replacing whatever was there.
     // `marks`, optional, maps passage pitch objects to 'cameUp' or 'missed'.
     function draw(container, passage, marks) {
         container.innerHTML = '';
+        const meter = SequenceMeter.meter(passage.timeSignature);
+        const widest = Math.max(...passage.bars.map(bar => minimumWidth(passage, bar, meter)));
+        const firstOpening = openingWidth(passage, meter, true);
+        const laterOpening = openingWidth(passage, meter, false);
+
         const available = Math.max(1, container.clientWidth);
-        const barsPerSystem = available >= ONE_SYSTEM_FROM ? 4 : 2;
-        const layoutWidth = Math.max(available, LAYOUT_MIN_WIDTH);
+        const oneSystemFits = available >= ONE_SYSTEM_FROM && (available - 2 * MARGIN - firstOpening) / 4 >= widest;
+        const barsPerSystem = oneSystemFits ? 4 : 2;
+        const layoutWidth = Math.max(available, LAYOUT_MIN_WIDTH,
+                                     Math.ceil(2 * MARGIN + firstOpening + barsPerSystem * widest));
         const systems = passage.bars.length / barsPerSystem;
         const layoutHeight = systems * SYSTEM_HEIGHT;
 
@@ -100,39 +158,22 @@ const SequenceNotation = (() => {
         svg.setAttribute('role', 'img');
         svg.setAttribute('aria-label', 'Passage in ' + SequenceTheory.keyLabel(passage.key) + ', ' + passage.timeSignature);
 
-        const meter = SequenceMeter.meter(passage.timeSignature);
-        const beamGroups = [new Flow.Fraction(meter.beamLength, 8)];
         const usable = layoutWidth - 2 * MARGIN;
-
         for (let system = 0; system < systems; system++) {
             const top = system * SYSTEM_HEIGHT + 20;
-            const opening = system === 0 ? OPENING_EXTRA.withSignature : OPENING_EXTRA.withoutSignature;
+            const opening = system === 0 ? firstOpening : laterOpening;
             const barWidth = (usable - opening) / barsPerSystem;
             let x = MARGIN;
 
             for (let column = 0; column < barsPerSystem; column++) {
                 const barIndex = system * barsPerSystem + column;
-                const bar = passage.bars[barIndex];
+                const last = barIndex === passage.bars.length - 1;
                 const width = barWidth + (column === 0 ? opening : 0);
-                const treble = new Flow.Stave(x, top, width);
-                const bass = new Flow.Stave(x, top + STAFF_GAP, width);
-                if (column === 0) {
-                    treble.addClef('treble').addKeySignature(signatureName(passage.key));
-                    bass.addClef('bass').addKeySignature(signatureName(passage.key));
-                    if (system === 0) {
-                        treble.addTimeSignature(meter.beats + '/' + meter.beatValue);
-                        bass.addTimeSignature(meter.beats + '/' + meter.beatValue);
-                    }
-                }
-                if (barIndex === passage.bars.length - 1) {
+                const { treble, bass } = staves(passage, meter, x, top, width, column === 0, system === 0);
+                if (last) {
                     treble.setEndBarType(Flow.Barline.type.END);
                     bass.setEndBarType(Flow.Barline.type.END);
                 }
-                // Both staves start their notes at the same x, so the hands line up
-                // even though a treble and a bass clef differ in width.
-                const noteStart = Math.max(treble.getNoteStartX(), bass.getNoteStartX());
-                treble.setNoteStartX(noteStart);
-                bass.setNoteStartX(noteStart);
                 treble.setContext(context).draw();
                 bass.setContext(context).draw();
 
@@ -140,22 +181,13 @@ const SequenceNotation = (() => {
                     new Flow.StaveConnector(treble, bass).setType('brace').setContext(context).draw();
                     new Flow.StaveConnector(treble, bass).setType('singleLeft').setContext(context).draw();
                 }
-                const rightEnd = barIndex === passage.bars.length - 1 ? 'boldDoubleRight' : 'singleRight';
-                new Flow.StaveConnector(treble, bass).setType(rightEnd).setContext(context).draw();
+                new Flow.StaveConnector(treble, bass).setType(last ? 'boldDoubleRight' : 'singleRight').setContext(context).draw();
 
-                const rightNotes = staffNotes(passage, bar.right, 'right', marks);
-                const leftNotes = staffNotes(passage, bar.left, 'left', marks);
-                const timing = { num_beats: meter.beats, beat_value: meter.beatValue };
-                const rightVoice = new Flow.Voice(timing).addTickables(rightNotes);
-                const leftVoice = new Flow.Voice(timing).addTickables(leftNotes);
-                const beams = [
-                    ...Flow.Beam.generateBeams(rightNotes, { groups: beamGroups }),
-                    ...Flow.Beam.generateBeams(leftNotes, { groups: beamGroups }),
-                ];
-                new Flow.Formatter().joinVoices([rightVoice]).joinVoices([leftVoice])
-                    .format([rightVoice, leftVoice], treble.getNoteEndX() - treble.getNoteStartX() - 10);
-                rightVoice.draw(context, treble);
-                leftVoice.draw(context, bass);
+                const { voices, beams } = barVoices(passage, passage.bars[barIndex], marks, meter);
+                new Flow.Formatter().joinVoices([voices[0]]).joinVoices([voices[1]])
+                    .format(voices, treble.getNoteEndX() - treble.getNoteStartX() - 10);
+                voices[0].draw(context, treble);
+                voices[1].draw(context, bass);
                 beams.forEach(beam => beam.setContext(context).draw());
                 x += width;
             }
