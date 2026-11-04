@@ -1,4 +1,4 @@
-const CACHE = 'piano-chord-v5';
+const CACHE = 'piano-chord-v6';
 
 // Paths are relative to this worker's own scope. Absolute '/repo-name/...'
 // paths only resolved on GitHub Pages — anywhere else (localhost, a fork under
@@ -24,7 +24,24 @@ const ASSETS = [
   './Sharp.png',
   './B.png',
   './Doki_chords_192.png',
-  './Doki_chords_512.png'
+  './Doki_chords_512.png',
+  // Sequence Mode
+  './sequence.html',
+  './sequence/sequence.css',
+  './vendor/vexflow/vexflow.js',
+  './sequence/core/pitch.js',
+  './sequence/core/theory.js',
+  './sequence/core/meter.js',
+  './sequence/core/difficulty.js',
+  './sequence/core/progressions.js',
+  './sequence/core/rhythm.js',
+  './sequence/core/accompaniment.js',
+  './sequence/core/passage.js',
+  './sequence/core/melody.js',
+  './sequence/core/generator.js',
+  './sequence/core/comparison.js',
+  './sequence/shell/notation.js',
+  './sequence/shell/page.js'
 ];
 
 const FONT_CSS = 'https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Playfair+Display:wght@400;700&family=Source+Code+Pro:wght@400;600&display=swap';
