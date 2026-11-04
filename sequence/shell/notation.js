@@ -128,12 +128,12 @@ const SequenceNotation = (() => {
         return formatter.preCalculateMinTotalWidth(voices) + BAR_PADDING;
     }
 
-    function staves(passage, meter, x, top, width, opening, withTime) {
+    function staves(key, meter, x, top, width, opening, withTime) {
         const treble = new Flow.Stave(x, top, width);
         const bass = new Flow.Stave(x, top + STAFF_GAP, width);
         if (opening) {
-            treble.addClef('treble').addKeySignature(signatureName(passage.key));
-            bass.addClef('bass').addKeySignature(signatureName(passage.key));
+            treble.addClef('treble').addKeySignature(signatureName(key));
+            bass.addClef('bass').addKeySignature(signatureName(key));
             if (withTime) {
                 treble.addTimeSignature(meter.beats + '/' + meter.beatValue);
                 bass.addTimeSignature(meter.beats + '/' + meter.beatValue);
@@ -149,9 +149,9 @@ const SequenceNotation = (() => {
 
     // How much wider than a plain bar a system's first bar is, for its clefs,
     // key signature and — on the first system — time signature.
-    function openingWidth(passage, meter, withTime) {
-        const plain = staves(passage, meter, 0, 0, 500, false, false).treble.getNoteStartX();
-        return staves(passage, meter, 0, 0, 500, true, withTime).treble.getNoteStartX() - plain;
+    function openingWidth(key, meter, withTime) {
+        const plain = staves(key, meter, 0, 0, 500, false, false).treble.getNoteStartX();
+        return staves(key, meter, 0, 0, 500, true, withTime).treble.getNoteStartX() - plain;
     }
 
     // Draws `passage` into `container`, replacing whatever was there.
@@ -163,8 +163,8 @@ const SequenceNotation = (() => {
         container.innerHTML = '';
         const meter = SequenceMeter.meter(passage.timeSignature);
         const widest = Math.max(...passage.bars.map(bar => minimumWidth(passage, bar, meter)));
-        const firstOpening = openingWidth(passage, meter, true);
-        const laterOpening = openingWidth(passage, meter, false);
+        const firstOpening = openingWidth(passage.key, meter, true);
+        const laterOpening = openingWidth(passage.key, meter, false);
 
         const available = Math.max(1, container.clientWidth);
         const oneSystemFits = available >= ONE_SYSTEM_FROM && (available - 2 * MARGIN - firstOpening) / 4 >= widest;
@@ -197,7 +197,7 @@ const SequenceNotation = (() => {
                 const barIndex = system * barsPerSystem + column;
                 const last = barIndex === passage.bars.length - 1;
                 const width = barWidth + (column === 0 ? opening : 0);
-                const { treble, bass } = staves(passage, meter, x, top, width, column === 0, system === 0);
+                const { treble, bass } = staves(passage.key, meter, x, top, width, column === 0, system === 0);
                 if (last) {
                     treble.setEndBarType(Flow.Barline.type.END);
                     bass.setEndBarType(Flow.Barline.type.END);
