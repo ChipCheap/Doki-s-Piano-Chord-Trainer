@@ -14,6 +14,13 @@ const SequenceBindings = (() => {
     let learning = null;
 
     const NAMED_KEYS = { Space: 'Space', Enter: 'Enter', ArrowLeft: '←', ArrowRight: '→', ArrowUp: '↑', ArrowDown: '↓' };
+    // Bindings are stored by key position (event.code), which stays the same
+    // whatever the keyboard layout; what is printed on the key is asked of
+    // the browser where it can tell. Without it, labels follow a US layout.
+    let layout = null;
+    if (navigator.keyboard && navigator.keyboard.getLayoutMap) {
+        navigator.keyboard.getLayoutMap().then(map => { layout = map; }).catch(() => {});
+    }
 
     function commandFor(table, key) {
         return SequenceStore.COMMANDS.find(command => table[command] === key) || null;
@@ -98,7 +105,9 @@ const SequenceBindings = (() => {
     function label(method, key) {
         if (key === null) return '—';
         if (method === 'midi') return midiKeyLabel(key);
-        return NAMED_KEYS[key] || key.replace(/^(Key|Digit|Numpad)/, '');
+        if (NAMED_KEYS[key]) return NAMED_KEYS[key];
+        const printed = layout && layout.get(key);
+        return printed ? printed.toUpperCase() : key.replace(/^(Key|Digit|Numpad)/, '');
     }
 
     return { start, learn, cancelLearning, assign, label };
