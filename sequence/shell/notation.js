@@ -40,12 +40,18 @@ const SequenceNotation = (() => {
     // A rest sits in the middle of its staff.
     const REST_KEYS = { right: 'b/4', left: 'd/3' };
 
-    // The review's two marks, colour and symbol together so colour is never
-    // the only signal. Colours match the chord trainer's keyboard.
+    // The review's marks, colour and symbol together so colour is never the
+    // only signal: a right note is blue and plain, every kind of mistake has a
+    // symbol of its own above the note. Colours follow the chord trainer's
+    // keyboard; notes not reached are only greyed.
     const MARK_STYLES = {
-        cameUp: { colour: '#1a3a8b', symbol: '' },
+        matched: { colour: '#1a3a8b', symbol: '' },
         missed: { colour: '#8b1a1a', symbol: '✗' },
+        wrong: { colour: '#8a6d1f', symbol: '≠' },
+        outOfOrder: { colour: '#2a6a6a', symbol: '↔' },
+        notAttempted: { colour: '#a89a80', symbol: '' },
     };
+    const SYMBOL_ORDER = ['missed', 'wrong', 'outOfOrder'];
 
     function vexKey(pitch) {
         return pitch.letter.toLowerCase() + '/' + pitch.octave;
@@ -78,11 +84,12 @@ const SequenceNotation = (() => {
                 const mark = marks && marks.get(pitch);
                 if (mark) note.setKeyStyle(keyIndex, { fillStyle: MARK_STYLES[mark].colour, strokeStyle: MARK_STYLES[mark].colour });
             });
-            const symbols = event.pitches.map(pitch => marks && marks.get(pitch))
-                .filter(mark => mark && MARK_STYLES[mark].symbol).map(mark => MARK_STYLES[mark].symbol);
-            if (symbols.length) {
-                const annotation = new Flow.Annotation(symbols[0]).setVerticalJustification(Flow.Annotation.VerticalJustify.TOP);
-                annotation.setStyle({ fillStyle: MARK_STYLES.missed.colour });
+            // One symbol per kind of mistake in the chord, most serious first.
+            const kinds = SYMBOL_ORDER.filter(kind => event.pitches.some(pitch => marks && marks.get(pitch) === kind));
+            if (kinds.length) {
+                const annotation = new Flow.Annotation(kinds.map(kind => MARK_STYLES[kind].symbol).join(''))
+                    .setVerticalJustification(Flow.Annotation.VerticalJustify.TOP);
+                annotation.setStyle({ fillStyle: MARK_STYLES[kinds[0]].colour });
                 note.addModifier(annotation, 0);
             }
             return note;
@@ -160,8 +167,9 @@ const SequenceNotation = (() => {
     }
 
     // Draws `passage` into `container`, replacing whatever was there.
-    // options.marks, optional, maps passage pitch objects to 'cameUp' or
-    // 'missed'; options.chordNames puts each bar's chord symbol above it.
+    // options.marks, optional, maps passage pitch objects to a status from
+    // SequenceComparison ('matched', 'missed', 'wrong', 'outOfOrder',
+    // 'notAttempted'); options.chordNames puts each bar's chord symbol above it.
     function draw(container, passage, options) {
         const { marks = null, chordNames = false } = options || {};
         const lineHeight = SYSTEM_HEIGHT + (chordNames ? CHORD_NAME_ROOM : 0);
