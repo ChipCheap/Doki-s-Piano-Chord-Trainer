@@ -29,10 +29,9 @@ button[hidden] { display: none; }
 .sequence-status[hidden] { display: none; }
 
 /* ── NOTATION ── */
+/* No background of its own: the passage is printed straight onto the card's
+   paper, as in the chord trainer. */
 .notation-wrapper {
-  background: #fff;
-  border-radius: 3px;
-  box-shadow: inset 0 0 0 1px rgba(200,169,110,0.3);
   position: relative;
   min-height: 160px;
 }
