@@ -261,8 +261,12 @@ const SequenceSettingsPanel = (() => {
     }
 
     // ── Opening and closing ───────────────────
+    // Focus moves into the panel on opening, stays inside it while it is
+    // open, and goes back to where it was on closing.
+    let returnFocus = null;
     function open() {
         clearTimeout(closeTimer);
+        returnFocus = document.activeElement;
         build();
         modal.style.display = 'flex';
         requestAnimationFrame(() => modal.classList.add('visible'));
@@ -274,6 +278,18 @@ const SequenceSettingsPanel = (() => {
         modal.classList.remove('visible');
         clearTimeout(closeTimer);
         closeTimer = setTimeout(() => { modal.style.display = 'none'; }, 250);
+        if (returnFocus instanceof HTMLElement) returnFocus.focus();
+    }
+
+    function keepFocusInside(event) {
+        const focusable = [...modal.querySelectorAll('button, select, input, [tabindex]:not([tabindex="-1"])')]
+            .filter(candidate => !candidate.disabled && candidate.offsetParent !== null);
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+        else if (!modal.contains(document.activeElement)) { event.preventDefault(); first.focus(); }
     }
 
     function isOpen() {
@@ -289,7 +305,9 @@ const SequenceSettingsPanel = (() => {
         // An Escape the bindings already used to cancel learning a key does
         // not also close the panel.
         document.addEventListener('keydown', event => {
-            if (event.key === 'Escape' && isOpen() && !event.defaultPrevented) close();
+            if (!isOpen()) return;
+            if (event.key === 'Escape' && !event.defaultPrevented) close();
+            if (event.key === 'Tab') keepFocusInside(event);
         });
     }
 
