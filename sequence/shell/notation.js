@@ -27,6 +27,10 @@ const SequenceNotation = (() => {
     // Room a bar's notes need beyond VexFlow's own minimum, so neighbouring
     // notes and accidentals never touch.
     const BAR_PADDING = 30;
+    // The sequence of played notes: room per notehead, and the lowest staff
+    // step that belongs on the treble staff (middle C).
+    const SEQUENCE_NOTE_WIDTH = 34;
+    const TREBLE_LOWEST_STEP = 28;
 
     // Dotted values carry the dot in the duration, which is what gives them
     // their length; the drawn dot is attached separately.
@@ -229,5 +233,62 @@ const SequenceNotation = (() => {
         }
     }
 
-    return { draw };
+    // Draws `pitches` one after another on a grand staff in `key`: what was
+    // played, in order. There is no metre and no rhythm, since no timing is
+    // recorded: every note is a plain notehead, and a note shows its
+    // accidental whenever it differs from the key signature. Each note goes
+    // on the staff its spelling belongs to, and the other staff waits.
+    function drawSequence(container, key, pitches) {
+        container.innerHTML = '';
+        if (pitches.length === 0) return;
+        const available = Math.max(1, container.clientWidth);
+        const layoutWidth = Math.max(available, LAYOUT_MIN_WIDTH);
+        const usable = layoutWidth - 2 * MARGIN;
+        const opening = openingWidth(key, null, false);
+        const perLine = Math.max(6, Math.floor((usable - opening) / SEQUENCE_NOTE_WIDTH));
+        const lines = [];
+        for (let start = 0; start < pitches.length; start += perLine) lines.push(pitches.slice(start, start + perLine));
+        const layoutHeight = lines.length * SYSTEM_HEIGHT;
+
+        const renderer = new Flow.Renderer(container, Flow.Renderer.Backends.SVG);
+        renderer.resize(layoutWidth, layoutHeight);
+        const context = renderer.getContext();
+        const svg = container.querySelector('svg');
+        svg.setAttribute('viewBox', '0 0 ' + layoutWidth + ' ' + layoutHeight);
+        svg.style.width = '100%';
+        svg.style.height = 'auto';
+        svg.setAttribute('role', 'img');
+        svg.setAttribute('aria-label', 'The ' + pitches.length + ' passage notes played, in the order played');
+
+        lines.forEach((line, lineIndex) => {
+            const top = lineIndex * SYSTEM_HEIGHT + 20;
+            const width = lineIndex === lines.length - 1
+                ? Math.min(usable, opening + line.length * SEQUENCE_NOTE_WIDTH + BAR_PADDING) : usable;
+            const { treble, bass } = staves(key, null, MARGIN, top, width, true, false);
+            treble.setContext(context).draw();
+            bass.setContext(context).draw();
+            new Flow.StaveConnector(treble, bass).setType('brace').setContext(context).draw();
+            new Flow.StaveConnector(treble, bass).setType('singleLeft').setContext(context).draw();
+            new Flow.StaveConnector(treble, bass).setType('singleRight').setContext(context).draw();
+
+            const upper = [], lower = [];
+            for (const pitch of line) {
+                const onTreble = SequencePitch.diatonicStep(pitch) >= TREBLE_LOWEST_STEP;
+                const note = new Flow.StaveNote({ clef: onTreble ? 'treble' : 'bass', keys: [vexKey(pitch)], duration: 'w' });
+                if (pitch.alteration !== SequenceTheory.signatureAlteration(key, pitch.letter)) {
+                    note.addModifier(new Flow.Accidental(ACCIDENTAL_GLYPHS[pitch.alteration]), 0);
+                }
+                (onTreble ? upper : lower).push(note);
+                (onTreble ? lower : upper).push(new Flow.GhostNote({ duration: 'w' }));
+            }
+            const timing = { num_beats: line.length * 4, beat_value: 4 };
+            const voices = [new Flow.Voice(timing).addTickables(upper), new Flow.Voice(timing).addTickables(lower)];
+            new Flow.Formatter().joinVoices([voices[0]]).joinVoices([voices[1]])
+                .format(voices, treble.getNoteEndX() - treble.getNoteStartX() - 10);
+            voices[0].draw(context, treble);
+            voices[1].draw(context, bass);
+        });
+    }
+
+    return { draw, drawSequence };
 })();
