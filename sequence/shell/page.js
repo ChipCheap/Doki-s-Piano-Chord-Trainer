@@ -127,14 +127,21 @@
         lastState = view.state;
     }
 
-    // Settings save shortly after the last change, as the chord trainer's do.
+    // Settings save shortly after the last change, as the chord trainer's do,
+    // and at once if the page is left before that.
     let saveTimer = null;
+    function saveSettings() {
+        clearTimeout(saveTimer);
+        saveTimer = null;
+        SequenceStore.saveSettings(settings);
+    }
     function settingsChanged() {
         clearTimeout(saveTimer);
-        saveTimer = setTimeout(() => SequenceStore.saveSettings(settings), 300);
+        saveTimer = setTimeout(saveSettings, 300);
         SequenceState.clearProblem();
         showStatus(SequenceState.view());
     }
+    window.addEventListener('pagehide', () => { if (saveTimer !== null) saveSettings(); });
 
     controls.generate.addEventListener('click', () => SequenceState.generate());
     controls.done.addEventListener('click', () => SequenceState.done());
