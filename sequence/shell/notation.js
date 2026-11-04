@@ -85,16 +85,38 @@ const SequenceNotation = (() => {
         });
     }
 
+    // Beams for one staff of a bar, decided from the meter rather than left to
+    // VexFlow: every run of two or more eighth notes inside the same beam
+    // window (meter.js's beamLength) shares a beam; a rest or a longer note
+    // breaks the run.
+    function staffBeams(events, notes, beamLength) {
+        const beams = [];
+        let run = [];
+        let runWindow = null;
+        const close = () => {
+            if (run.length >= 2) beams.push(new Flow.Beam(run));
+            run = [];
+        };
+        events.forEach((event, index) => {
+            const window = Math.floor(event.position / beamLength);
+            if (event.duration !== SequenceMeter.DURATIONS.eighth || event.pitches.length === 0) { close(); return; }
+            if (window !== runWindow) close();
+            run.push(notes[index]);
+            runWindow = window;
+        });
+        close();
+        return beams;
+    }
+
     // Both staves of one bar as VexFlow voices, with their beams.
     function barVoices(passage, bar, marks, meter) {
-        const beamGroups = [new Flow.Fraction(meter.beamLength, 8)];
         const rightNotes = staffNotes(passage, bar.right, 'right', marks);
         const leftNotes = staffNotes(passage, bar.left, 'left', marks);
         const timing = { num_beats: meter.beats, beat_value: meter.beatValue };
         return {
             voices: [new Flow.Voice(timing).addTickables(rightNotes), new Flow.Voice(timing).addTickables(leftNotes)],
-            beams: [...Flow.Beam.generateBeams(rightNotes, { groups: beamGroups }),
-                    ...Flow.Beam.generateBeams(leftNotes, { groups: beamGroups })],
+            beams: [...staffBeams(bar.right, rightNotes, meter.beamLength),
+                    ...staffBeams(bar.left, leftNotes, meter.beamLength)],
         };
     }
 
