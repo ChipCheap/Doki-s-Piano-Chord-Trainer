@@ -60,6 +60,11 @@ const SequenceComparison = (() => {
     // prefers a match, then a wrong note, then closing the group, then an
     // extra key, so the result never depends on chance.
     const NEAR_MISS = 2;
+    // A wrong note costs less than a miss and an extra key together, so one key
+    // in a note's place reads as a slip on that note — but more than either
+    // alone, so a note simply played a group late reads as one note out of
+    // order rather than as two wrong notes.
+    const WRONG_COST = 1.5;
     const MASK_SPACE = 32;
 
     function align(passage, played) {
@@ -92,7 +97,7 @@ const SequenceComparison = (() => {
                 });
                 group.notes.forEach((note, index) => {
                     if (mask & (1 << index) || note.midi === midi || Math.abs(note.midi - midi) > NEAR_MISS) return;
-                    consider(1 + best(playedIndex + 1, groupIndex, mask | (1 << index)).cost, { kind: 'wrong', note: index });
+                    consider(WRONG_COST + best(playedIndex + 1, groupIndex, mask | (1 << index)).cost, { kind: 'wrong', note: index });
                 });
             }
             if (group) consider(unmatchedCount(group, mask) + best(playedIndex, groupIndex + 1, 0).cost, { kind: 'close' });
