@@ -92,13 +92,14 @@ const SequenceNotation = (() => {
     // Beams for one staff of a bar, decided from the meter rather than left to
     // VexFlow: every run of two or more eighth notes inside the same beam
     // window (meter.js's beamLength) shares a beam; a rest or a longer note
-    // breaks the run.
+    // breaks the run. Each beam turns all its stems the same way, chosen from
+    // the notes' average position, as engraving does.
     function staffBeams(events, notes, beamLength) {
         const beams = [];
         let run = [];
         let runWindow = null;
         const close = () => {
-            if (run.length >= 2) beams.push(new Flow.Beam(run));
+            if (run.length >= 2) beams.push(new Flow.Beam(run, true));
             run = [];
         };
         events.forEach((event, index) => {
