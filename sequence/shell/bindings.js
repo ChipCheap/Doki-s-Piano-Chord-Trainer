@@ -38,6 +38,11 @@ const SequenceBindings = (() => {
             (target.isContentEditable || ['INPUT', 'SELECT', 'TEXTAREA'].includes(target.tagName));
     }
 
+    function isActivatable(target) {
+        return target instanceof HTMLElement && (['A', 'BUTTON', 'SUMMARY'].includes(target.tagName) ||
+            target.getAttribute('role') === 'button');
+    }
+
     function keyPressed(event) {
         if (event.repeat || event.ctrlKey || event.altKey || event.metaKey) return;
         if (learning && learning.method === 'computer') {
@@ -52,9 +57,12 @@ const SequenceBindings = (() => {
             return;
         }
         if (hooks.suspended() || isTyping(event.target)) return;
+        // Enter and Space keep their own job on a focused link or button, so
+        // the page stays usable from the keyboard: Enter still follows the
+        // link back to the chord trainer even though it is bound to Done.
+        if ((event.code === 'Enter' || event.code === 'Space') && isActivatable(event.target)) return;
         const command = commandFor(hooks.bindings().computer, event.code);
         if (!command) return;
-        // Also stops Enter from pressing whichever button has the focus.
         event.preventDefault();
         hooks.command(command);
     }
