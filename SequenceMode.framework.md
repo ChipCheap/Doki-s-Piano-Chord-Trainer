@@ -176,7 +176,9 @@ them. How that is done is a matter for specification.
 
 ### Surface
 
-- The passage, notated.
+- The passage, notated, printed straight onto the page's paper.
+- An optional reading aid, remembered: each bar's chord named above it, as on a
+  lead sheet. Off by default.
 - Controls for generate, done and retry; playback appears only after an attempt.
 - Settings for difficulty, time signature, left-hand pattern, and the control
   bindings for both input methods, presented side by side.
