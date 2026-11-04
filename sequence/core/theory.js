@@ -118,8 +118,20 @@ const SequenceTheory = (() => {
         return key.tonic.letter + symbols[key.tonic.alteration] + ' ' + key.mode;
     }
 
+    // The chord as a lead-sheet symbol above a bar: the spelled root, then m
+    // for minor or ° for diminished — Am, F♯, B°, G𝄪° in A♯ minor.
+    const ROOT_ACCIDENTALS = { '-2': '𝄫', '-1': '♭', '0': '', '1': '♯', '2': '𝄪' };
+    const QUALITY_SUFFIXES = { '4,7': '', '3,7': 'm', '3,6': '°', '4,8': '+' };
+
+    function chordSymbol(key, chordInKey) {
+        const tones = chordTones(key, chordInKey);
+        const semitone = tone => SequencePitch.midi(SequencePitch.create(tone.letter, tone.alteration, 4));
+        const above = tones.slice(1).map(tone => (semitone(tone) - semitone(tones[0]) + 12) % 12).join(',');
+        return tones[0].letter + ROOT_ACCIDENTALS[tones[0].alteration] + QUALITY_SUFFIXES[above];
+    }
+
     return {
         KEYS, signatureAlteration, degreeOf, chord, chordTones, isChordTone,
-        melodyAlteration, displayedAccidentals, keyLabel,
+        melodyAlteration, displayedAccidentals, keyLabel, chordSymbol,
     };
 })();
