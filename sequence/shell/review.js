@@ -2,51 +2,50 @@
 //  SEQUENCE MODE — REVIEW VIEW (shell)
 // ═══════════════════════════════════════════════
 
-// Shows, after an attempt, which of the passage's notes came up at all, and
-// which keys were played that the passage does not have. It never says which
-// hand anything belongs to, and nothing about timing. Passage notes are named
-// by their spelling; played keys, which have none, by both of their names.
+// After an attempt: one line saying how much of the passage came up, the
+// passage above marked note by note, and a grand staff of the passage notes
+// that were played, in the order they were played. The played staff shows
+// only notes that match the passage, spelled as the passage spells them;
+// keys the passage does not have are named in the summary line, since a
+// played key has no spelling of its own. Nothing names a hand or says
+// anything about timing.
 const SequenceReview = (() => {
     const element = SequenceDisplay.element;
 
+    function summary(check) {
+        const total = check.notes.length;
+        const cameUp = check.notes.filter(note => note.cameUp).length;
+        const extra = check.extra.length;
+        const lines = [];
+        if (cameUp === total && extra === 0) {
+            lines.push(element('p', 'review-head ok', '✓ Every note of the passage came up, and nothing else.'));
+            return lines;
+        }
+        lines.push(element('p', 'review-head', cameUp + ' of ' + total + ' notes came up' +
+            (cameUp < total ? '; the passage above marks the others ✗.' : '.')));
+        if (extra) {
+            lines.push(element('p', 'review-extra', extra + (extra === 1 ? ' key' : ' keys') +
+                ' played that the passage does not have: ' + check.extra.map(midiKeyLabel).join(', ') + '.'));
+        }
+        return lines;
+    }
+
     // Fills `container` with the review of `played` against `passage`, and
-    // returns the marks for the notation: each passage pitch → 'cameUp' or
-    // 'missed'.
+    // returns the marks for the passage's notation: each passage pitch →
+    // 'cameUp' or 'missed'. `container` must be showing, so the played staff
+    // can be laid out for its width.
     function show(container, passage, played) {
         const check = SequenceComparison.wholePassage(passage, played);
-        const missed = check.notes.filter(note => !note.cameUp);
-        const cameUp = check.notes.length - missed.length;
         container.innerHTML = '';
+        container.append(...summary(check));
 
-        const verdict = missed.length === 0 && check.extra.length === 0;
-        const head = element('p', 'review-head ' + (verdict ? 'ok' : 'bad'),
-            (verdict ? '✓ ' : '') + cameUp + ' of ' + check.notes.length + ' notes came up' +
-            (check.extra.length ? ', and ' + check.extra.length + ' played ' + (check.extra.length === 1 ? 'key was' : 'keys were') +
-             ' not in the passage.' : '.'));
-        container.appendChild(head);
-
-        if (missed.length) {
-            const byBar = new Map();
-            for (const note of missed) {
-                if (!byBar.has(note.bar)) byBar.set(note.bar, []);
-                byBar.get(note.bar).push(SequencePitch.label(note.pitch));
-            }
-            const line = element('p', 'review-line');
-            line.append(element('span', 'review-label', 'Not played'),
-                        document.createTextNode([...byBar].map(([bar, labels]) => 'bar ' + (bar + 1) + ': ' + labels.join(', ')).join(' · ')));
-            container.appendChild(line);
+        const matched = check.played.filter(pair => pair.pitch !== null).map(pair => pair.pitch);
+        if (matched.length) {
+            container.appendChild(element('p', 'review-played-title', 'What you played, in order'));
+            const staff = element('div', 'review-played');
+            container.appendChild(staff);
+            SequenceNotation.drawSequence(staff, passage.key, matched);
         }
-        if (check.extra.length) {
-            const line = element('p', 'review-line');
-            line.append(element('span', 'review-label', 'Not in the passage'),
-                        document.createTextNode(check.extra.map(midiKeyLabel).join(', ')));
-            container.appendChild(line);
-        }
-        const legend = element('p', 'review-legend');
-        legend.append(element('span', 'review-came', '●'), document.createTextNode(' came up   '),
-                      element('span', 'review-missed', '✗'), document.createTextNode(' not played'));
-        container.appendChild(legend);
-
         return new Map(check.notes.map(note => [note.pitch, note.cameUp ? 'cameUp' : 'missed']));
     }
 

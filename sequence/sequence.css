@@ -64,21 +64,17 @@ button[hidden] { display: none; }
   position: relative;
 }
 .sequence-review[hidden] { display: none; }
-.review-head { font-size: 1.05rem; margin-bottom: 6px; }
+.review-head { font-size: 1.05rem; margin-bottom: 4px; }
 .review-head.ok { color: #1a5a2b; }
-.review-head.bad { color: var(--ink); }
-.review-line { font-size: 0.92rem; line-height: 1.5; margin: 4px 0; }
-.review-label {
-  display: inline-block;
-  min-width: 10.5em;
+.review-extra { font-size: 0.92rem; color: #5a4630; margin-bottom: 4px; }
+.review-played-title {
+  margin-top: 14px;
   font-size: 0.68rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: #7a6040;
 }
-.review-legend { font-size: 0.8rem; color: #7a6040; margin-top: 8px; white-space: pre; }
-.review-came { color: #1a3a8b; }
-.review-missed { color: #8b1a1a; }
+.review-played svg { display: block; }
 
 /* ── SETTINGS PANEL ── */
 #spBody { padding: 8px 24px 24px; }
