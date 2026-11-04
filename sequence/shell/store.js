@@ -5,7 +5,7 @@
 // Sequence Mode's two stored entries, under keys of its own, through the
 // shared storage helpers:
 //
-//   settings — { version, parameters, timeSignature, tempo, bindings }
+//   settings — { version, parameters, timeSignature, tempo, showChordNames, bindings }
 //   passage  — the passage on screen, so a reload brings it back
 //
 // Whatever is read back is checked whole first, so nothing else ever sees a
@@ -28,6 +28,7 @@ const SequenceStore = (() => {
             parameters: SequenceDifficulty.presetParameters(SequenceDifficulty.DEFAULT_PRESET),
             timeSignature: '4/4',
             tempo: TEMPO.initial,
+            showChordNames: false,
             bindings: {
                 computer: { generate: 'KeyN', done: 'Enter', retry: 'KeyR', play: 'KeyP' },
                 midi: { generate: null, done: null, retry: null, play: null },
@@ -64,6 +65,7 @@ const SequenceStore = (() => {
             parameters: SequenceDifficulty.sanitize(source.parameters),
             timeSignature: SequenceMeter.TIME_SIGNATURES[source.timeSignature] ? source.timeSignature : defaults.timeSignature,
             tempo,
+            showChordNames: typeof source.showChordNames === 'boolean' ? source.showChordNames : defaults.showChordNames,
             bindings: {
                 computer: bindingTable(bindings.computer, defaults.bindings.computer,
                     value => typeof value === 'string' && value.length > 0),

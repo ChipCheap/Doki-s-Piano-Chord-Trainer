@@ -19,6 +19,9 @@ const SequenceNotation = (() => {
     // Tall enough for the hand ranges difficulty.js allows: three ledger
     // lines above the treble staff, two below the bass.
     const SYSTEM_HEIGHT = 240;
+    // Extra room above each line for the chord names, when they are shown.
+    const CHORD_NAME_ROOM = 22;
+    const CHORD_NAME_FONT = { family: 'Georgia, serif', size: 15, weight: 'bold' };
     const STAFF_GAP = 105;
     const MARGIN = 16;
     // Room a bar's notes need beyond VexFlow's own minimum, so neighbouring
@@ -130,8 +133,11 @@ const SequenceNotation = (() => {
     }
 
     // Draws `passage` into `container`, replacing whatever was there.
-    // `marks`, optional, maps passage pitch objects to 'cameUp' or 'missed'.
-    function draw(container, passage, marks) {
+    // options.marks, optional, maps passage pitch objects to 'cameUp' or
+    // 'missed'; options.chordNames puts each bar's chord symbol above it.
+    function draw(container, passage, options) {
+        const { marks = null, chordNames = false } = options || {};
+        const lineHeight = SYSTEM_HEIGHT + (chordNames ? CHORD_NAME_ROOM : 0);
         container.innerHTML = '';
         const meter = SequenceMeter.meter(passage.timeSignature);
         const widest = Math.max(...passage.bars.map(bar => minimumWidth(passage, bar, meter)));
@@ -144,7 +150,7 @@ const SequenceNotation = (() => {
         const layoutWidth = Math.max(available, LAYOUT_MIN_WIDTH,
                                      Math.ceil(2 * MARGIN + firstOpening + barsPerSystem * widest));
         const systems = passage.bars.length / barsPerSystem;
-        const layoutHeight = systems * SYSTEM_HEIGHT;
+        const layoutHeight = systems * lineHeight;
 
         const renderer = new Flow.Renderer(container, Flow.Renderer.Backends.SVG);
         renderer.resize(layoutWidth, layoutHeight);
@@ -160,7 +166,7 @@ const SequenceNotation = (() => {
 
         const usable = layoutWidth - 2 * MARGIN;
         for (let system = 0; system < systems; system++) {
-            const top = system * SYSTEM_HEIGHT + 20;
+            const top = system * lineHeight + 20 + (chordNames ? CHORD_NAME_ROOM : 0);
             const opening = system === 0 ? firstOpening : laterOpening;
             const barWidth = (usable - opening) / barsPerSystem;
             let x = MARGIN;
@@ -176,6 +182,13 @@ const SequenceNotation = (() => {
                 }
                 treble.setContext(context).draw();
                 bass.setContext(context).draw();
+                if (chordNames) {
+                    context.save();
+                    context.setFont(CHORD_NAME_FONT.family, CHORD_NAME_FONT.size, CHORD_NAME_FONT.weight);
+                    context.fillText(SequenceTheory.chordSymbol(passage.key, passage.bars[barIndex].chord),
+                                     treble.getNoteStartX(), top + 4);
+                    context.restore();
+                }
 
                 if (column === 0) {
                     new Flow.StaveConnector(treble, bass).setType('brace').setContext(context).draw();

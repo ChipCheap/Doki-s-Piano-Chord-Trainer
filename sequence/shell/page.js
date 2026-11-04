@@ -97,7 +97,7 @@
         review.hidden = view.state !== 'review';
         if (!view.passage) return;
         const marks = view.state === 'review' ? SequenceReview.show(review, view.passage, view.played) : null;
-        SequenceNotation.draw(notation, view.passage, marks);
+        SequenceNotation.draw(notation, view.passage, { marks, chordNames: settings.showChordNames });
     }
 
     function render() {
@@ -140,6 +140,15 @@
         showStatus(SequenceState.view());
     }
     window.addEventListener('pagehide', () => { if (saveTimer !== null) saveSettings(); });
+
+    // A reading aid, as on a lead sheet: the chord of each bar named above it.
+    const chordNamesCheckbox = document.getElementById('chordNamesCheckbox');
+    chordNamesCheckbox.checked = settings.showChordNames;
+    chordNamesCheckbox.addEventListener('change', () => {
+        settings.showChordNames = chordNamesCheckbox.checked;
+        settingsChanged();
+        showNotation(SequenceState.view());
+    });
 
     controls.generate.addEventListener('click', () => SequenceState.generate());
     controls.done.addEventListener('click', () => SequenceState.done());
