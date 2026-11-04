@@ -101,7 +101,7 @@ const SequenceNotation = (() => {
         svg.setAttribute('aria-label', 'Passage in ' + SequenceTheory.keyLabel(passage.key) + ', ' + passage.timeSignature);
 
         const meter = SequenceMeter.meter(passage.timeSignature);
-        const beamGroups = [new Flow.Fraction(meter.beatLength, 8)];
+        const beamGroups = [new Flow.Fraction(meter.beamLength, 8)];
         const usable = layoutWidth - 2 * MARGIN;
 
         for (let system = 0; system < systems; system++) {

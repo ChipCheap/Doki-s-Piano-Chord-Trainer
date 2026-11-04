@@ -123,8 +123,9 @@ octave.
 ## 6. Metre and rhythm
 
 **Rule.**
-- **4/4:** strong beats are 1 and 3. **3/4:** beat 1. Eighths are beamed in
-  pairs within each beat.
+- **4/4:** strong beats are 1 and 3, and eighths are beamed in fours (a half
+  bar, never across the middle). **3/4:** beat 1 is strong, and eighths are
+  beamed in pairs, one per beat.
 - The right hand's rhythm comes from a hand-written list of one-bar patterns,
   each chosen to read clearly (no note starting off the beat and running across
   it).
@@ -241,3 +242,5 @@ leap rules.
    strict, or about right?
 6. **Neighbour spelling in minor** (section 4): is E–F–E and A–G♯–A over i what
    you would expect to see?
+7. **Beaming** (section 6): fours in 4/4 and pairs in 3/4. Would you rather see
+   all six eighths of a 3/4 bar beamed together?

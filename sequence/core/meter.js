@@ -10,10 +10,12 @@ const SequenceMeter = (() => {
     const DURATIONS = { eighth: 1, quarter: 2, dottedQuarter: 3, half: 4, dottedHalf: 6 };
 
     // strongPositions are the beats that take a chord tone in the melody.
-    // Eighths beam in pairs within each quarter beat.
+    // beamLength is how many eighths one beam may join, as engraving usually
+    // does it: in 4/4 four, a half bar, never across the middle of the bar; in
+    // 3/4 two, one per beat.
     const TIME_SIGNATURES = {
-        '4/4': { beats: 4, beatValue: 4, barLength: 8, beatLength: 2, strongPositions: [0, 4] },
-        '3/4': { beats: 3, beatValue: 4, barLength: 6, beatLength: 2, strongPositions: [0] },
+        '4/4': { beats: 4, beatValue: 4, barLength: 8, beamLength: 4, strongPositions: [0, 4] },
+        '3/4': { beats: 3, beatValue: 4, barLength: 6, beamLength: 2, strongPositions: [0] },
     };
 
     function meter(timeSignature) {
@@ -24,14 +26,9 @@ const SequenceMeter = (() => {
         return meter(timeSignature).strongPositions.includes(position);
     }
 
-    // Notes in the same beam group may be beamed together.
-    function beamGroup(timeSignature, position) {
-        return Math.floor(position / meter(timeSignature).beatLength);
-    }
-
     // A note this long or longer is "long": it carries the weight of a beat,
     // so it obeys the same restrictions as a note on a strong beat.
     const LONG_NOTE = DURATIONS.quarter;
 
-    return { DURATIONS, TIME_SIGNATURES, LONG_NOTE, meter, isStrong, beamGroup };
+    return { DURATIONS, TIME_SIGNATURES, LONG_NOTE, meter, isStrong };
 })();
