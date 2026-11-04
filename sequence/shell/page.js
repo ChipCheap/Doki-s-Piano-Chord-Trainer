@@ -15,6 +15,7 @@
     const status = document.getElementById('sequenceStatus');
     const notation = document.getElementById('notation');
     const notationEmpty = document.getElementById('notationEmpty');
+    const review = document.getElementById('review');
 
     const settings = SequenceStore.loadSettings();
     const boundMidi = () => new Set(Object.values(settings.bindings.midi).filter(key => key !== null));
@@ -53,10 +54,15 @@
         status.hidden = text === '';
     }
 
+    // In review the passage carries the review's marks, and the review sits
+    // beneath it.
     function showNotation(view) {
         notationEmpty.hidden = view.passage !== null;
         notation.hidden = view.passage === null;
-        if (view.passage) SequenceNotation.draw(notation, view.passage);
+        review.hidden = view.state !== 'review';
+        if (!view.passage) return;
+        const marks = view.state === 'review' ? SequenceReview.show(review, view.passage, view.played) : null;
+        SequenceNotation.draw(notation, view.passage, marks);
     }
 
     function render() {
