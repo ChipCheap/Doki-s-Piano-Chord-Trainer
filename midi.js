@@ -186,12 +186,16 @@ function midiNoteName(midi) {
     return MIDI_KEY_NAMES_FLAT[midi % 12] + (Math.floor(midi / 12) - 1);
 }
 
+// Name for a bare key with both of its names where it has two, Db/C#4, so it
+// claims no spelling.
+function midiKeyLabel(midi) {
+    const pc  = midi % 12;
+    const oct = Math.floor(midi / 12) - 1;
+    return MIDI_KEY_NAMES_FLAT[pc] + (MIDI_KEY_NAMES_FLAT[pc].length > 1 ? '/' + MIDI_KEY_NAMES_SHARP[pc] : '') + oct;
+}
+
 function midiUpdateHeldDisplay() {
-    const names = [...midiHeldNotes].sort((a, b) => a - b).map(n => {
-        const pc  = n % 12;
-        const oct = Math.floor(n / 12) - 1;
-        return MIDI_KEY_NAMES_FLAT[pc] + (MIDI_KEY_NAMES_FLAT[pc].length > 1 ? '/' + MIDI_KEY_NAMES_SHARP[pc] : '') + oct;
-    });
+    const names = [...midiHeldNotes].sort((a, b) => a - b).map(midiKeyLabel);
     document.getElementById('midiHeldNotes').textContent = names.length ? names.join('  ') : '—';
 }
 
