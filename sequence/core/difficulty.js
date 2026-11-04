@@ -33,10 +33,14 @@ const SequenceDifficulty = (() => {
     // own staff whatever the spelling. The presets start the left hand no
     // higher than F2, the highest start that still fits every chord in root
     // position below B3.
-    const STEP = { C1: 7, C2: 14, F2: 17, B3: 27, C4: 28, G5: 39, A5: 40, C6: 42, E6: 44, C7: 49 };
+    const STEP = { C2: 14, F2: 17, B3: 27, C4: 28, G5: 39, A5: 40, C6: 42, E6: 44 };
+    // The outer limits of what can be set, like the chord trainer's octaves:
+    // up to three ledger lines above the treble staff (E6) and two below the
+    // bass staff (C2). Every note inside them fits the notation's lines of
+    // music, so the whole passage is always visible.
     const RANGE_LIMITS = {
-        rightRange: { low: STEP.C4, high: STEP.C7 },
-        leftRange:  { low: STEP.C1, high: STEP.B3 },
+        rightRange: { low: STEP.C4, high: STEP.E6 },
+        leftRange:  { low: STEP.C2, high: STEP.B3 },
     };
     // Seven steps span eight letters, a full octave such as D4 to D5: at least
     // twelve keys whichever letter it starts on, so every letter and every key
