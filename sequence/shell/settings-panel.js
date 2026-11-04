@@ -197,7 +197,10 @@ const SequenceSettingsPanel = (() => {
     }
 
     // ── The whole panel ───────────────────────
+    // Rebuilding drops any half-finished key learning along with its prompt,
+    // so the next key pressed is never bound without a sign.
     function build() {
+        SequenceBindings.cancelLearning();
         const settings = hooks.settings();
         const parameters = settings.parameters;
         body.innerHTML = '';
