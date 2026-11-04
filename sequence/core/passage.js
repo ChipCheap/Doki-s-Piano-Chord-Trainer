@@ -48,6 +48,9 @@ const SequencePassage = (() => {
     const RIGHT_LOWEST_STEP = 28;
     const LEFT_HIGHEST_STEP = 27;
     const CHORD_SIZE = 3;
+    // Only the lengths the generator writes, so everything that draws or plays
+    // a passage knows every length it can meet.
+    const NOTE_LENGTHS = Object.values(SequenceMeter.DURATIONS);
 
     function isPitch(value) {
         if (value === null || typeof value !== 'object' || !SequencePitch.LETTERS.includes(value.letter) ||
@@ -64,7 +67,7 @@ const SequencePassage = (() => {
         let expected = 0;
         for (const event of events) {
             if (event === null || typeof event !== 'object' || event.position !== expected ||
-                !Number.isInteger(event.duration) || event.duration <= 0 ||
+                !NOTE_LENGTHS.includes(event.duration) ||
                 !Array.isArray(event.pitches) || event.pitches.length > mostPitches ||
                 !event.pitches.every(pitch => isPitch(pitch) && onItsSide(SequencePitch.diatonicStep(pitch)))) return false;
             expected += event.duration;
