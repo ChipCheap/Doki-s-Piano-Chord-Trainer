@@ -38,7 +38,7 @@ const SequenceStore = (() => {
     function readJson(key) {
         const text = readStored(key);
         if (text === null) return null;
-        try { return JSON.parse(text); } catch (e) { return null; }
+        try { return JSON.parse(text); } catch { return null; }
     }
 
     // One method's bindings: each command keeps its stored key if it is of the
@@ -97,5 +97,5 @@ const SequenceStore = (() => {
         return writeStored(PASSAGE_KEY, JSON.stringify(passage));
     }
 
-    return { COMMANDS, TEMPO, defaultSettings, loadSettings, saveSettings, loadPassage, savePassage };
+    return { COMMANDS, TEMPO, loadSettings, saveSettings, loadPassage, savePassage };
 })();
