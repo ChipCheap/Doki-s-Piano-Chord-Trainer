@@ -60,6 +60,7 @@ const SequenceState = (() => {
         if (state === 'shown') {
             state = 'attempt';
             played = [midi];
+            problem = null;
         } else if (state === 'attempt') {
             played.push(midi);
         } else {
@@ -68,9 +69,12 @@ const SequenceState = (() => {
         hooks.changed();
     }
 
+    // A failure message belongs to the generate that failed; any later change
+    // of state replaces it.
     function done() {
         if (state !== 'attempt') return;
         state = 'review';
+        problem = null;
         hooks.changed();
     }
 
@@ -79,6 +83,7 @@ const SequenceState = (() => {
         leaveReview();
         played = [];
         state = 'shown';
+        problem = null;
         hooks.changed();
     }
 
