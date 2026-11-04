@@ -28,10 +28,47 @@
 
     const describe = problem => problem.message + (problem.keys.length ? ' ' + problem.keys.map(midiKeyLabel).join(', ') : '');
 
-    // A failure first, then settings that cannot produce a passage, then a
-    // passage that uses a key since bound to a control; otherwise a hint.
+    // Browsers keep sound off until the page has been clicked or a computer
+    // key pressed, and a MIDI key does not count. The first click or key
+    // turns it on. Play pressed from the MIDI keyboard before that asks for
+    // one click instead of playing silently.
+    let soundBlocked = false;
+    function allowSound() {
+        getAudioCtx().resume().then(() => {
+            document.removeEventListener('pointerdown', allowSound);
+            document.removeEventListener('keydown', allowSound);
+        }).catch(() => {});
+    }
+    document.addEventListener('pointerdown', allowSound);
+    document.addEventListener('keydown', allowSound);
+
+    // Inside a click or a computer key press, resuming the sound succeeds at
+    // once. From a MIDI key it waits for the page's first click, and then
+    // plays if the passage is still in review and nothing newer was asked.
+    let playRequest = 0;
+    function play(passage) {
+        const context = getAudioCtx();
+        if (context.state === 'running') { SequencePlayback.play(passage, settings.tempo); return; }
+        const request = ++playRequest;
+        context.resume().then(() => {
+            if (request === playRequest && SequenceState.view().state === 'review') SequencePlayback.play(passage, settings.tempo);
+        }).catch(() => {});
+        setTimeout(() => {
+            if (request !== playRequest || context.state === 'running') return;
+            soundBlocked = true;
+            showStatus(SequenceState.view());
+        }, 250);
+    }
+
+    // A failure first, then blocked sound, then settings that cannot produce
+    // a passage, then a passage that uses a key since bound to a control;
+    // otherwise a hint.
     function statusMessage(view) {
         if (view.problem) return { problem: true, text: describe(view.problem) };
+        if (soundBlocked) {
+            return { problem: true, text: 'The browser has not allowed sound yet: click anywhere on the page, or press ' +
+                'a key on the computer keyboard, once, and the passage will play.' };
+        }
         const settingsProblem = SequenceGenerator.problems(settings, boundMidi());
         if (settingsProblem) return { problem: true, text: 'Settings: ' + describe(settingsProblem) };
         if (view.passage && (view.state === 'shown' || view.state === 'attempt')) {
@@ -79,6 +116,8 @@
     // passage itself is not redrawn while it is being read.
     let lastState = null;
     function changed() {
+        soundBlocked = false;
+        playRequest++;
         const view = SequenceState.view();
         if (view.state === 'attempt' && lastState === 'attempt') {
             showStatus(view);
@@ -115,7 +154,7 @@
         settings: () => settings,
         boundMidi,
         changed,
-        play: passage => SequencePlayback.play(passage, settings.tempo),
+        play,
         stopPlayback: () => SequencePlayback.stop(),
     }, SequenceStore.loadPassage());
 
