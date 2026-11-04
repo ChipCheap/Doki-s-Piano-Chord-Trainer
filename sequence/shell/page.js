@@ -89,6 +89,14 @@
         status.hidden = text === '';
     }
 
+    // The staff of played notes filling in during an attempt, when the
+    // player has asked for it. It never touches the passage itself.
+    function showLiveReview(view) {
+        const live = view.state === 'attempt' && settings.showPlayedLive;
+        if (view.state !== 'review') review.hidden = !live;
+        if (live) SequenceReview.showLive(review, view.passage, view.played);
+    }
+
     // In review the passage carries the review's marks, and the review sits
     // beneath it.
     function showNotation(view) {
@@ -98,6 +106,7 @@
         if (!view.passage) return;
         const marks = view.state === 'review' ? SequenceReview.show(review, view.passage, view.played) : null;
         SequenceNotation.draw(notation, view.passage, { marks, chordNames: settings.showChordNames });
+        showLiveReview(view);
     }
 
     function render() {
@@ -110,8 +119,9 @@
         showNotation(view);
     }
 
-    // During an attempt only the status line changes with each note; the
-    // passage itself is not redrawn while it is being read.
+    // During an attempt only the status line, and the live played staff if it
+    // is on, change with each note; the passage itself is not redrawn while
+    // it is being read.
     let lastState = null;
     function changed() {
         soundBlocked = false;
@@ -119,6 +129,7 @@
         const view = SequenceState.view();
         if (view.state === 'attempt' && lastState === 'attempt') {
             showStatus(view);
+            showLiveReview(view);
         } else {
             render();
         }
@@ -148,6 +159,17 @@
         settings.showChordNames = chordNamesCheckbox.checked;
         settingsChanged();
         showNotation(SequenceState.view());
+    });
+
+    // Immediate feedback for those who want it: the played staff filling in as
+    // each key goes down. Off by default, since a wrong key showing nothing
+    // gives the answer away while reading.
+    const playedLiveCheckbox = document.getElementById('playedLiveCheckbox');
+    playedLiveCheckbox.checked = settings.showPlayedLive;
+    playedLiveCheckbox.addEventListener('change', () => {
+        settings.showPlayedLive = playedLiveCheckbox.checked;
+        settingsChanged();
+        showLiveReview(SequenceState.view());
     });
 
     controls.generate.addEventListener('click', () => SequenceState.generate());

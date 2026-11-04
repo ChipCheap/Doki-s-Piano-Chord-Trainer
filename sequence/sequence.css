@@ -9,10 +9,13 @@ button:disabled {
 }
 button[hidden] { display: none; }
 
-/* A reading aid beside the controls, like the chord trainer's Hide target. */
+/* Reading aids beside the controls, like the chord trainer's Hide target. */
+.sequence-toggles {
+  display: flex; flex-direction: column; gap: 4px;
+  margin-left: auto;
+}
 .sequence-toggle {
   display: flex; align-items: center; gap: 6px;
-  margin-left: auto;
   font-size: 0.88rem;
   color: #7a6040;
   cursor: pointer;
@@ -75,6 +78,7 @@ button[hidden] { display: none; }
   color: #7a6040;
 }
 .review-played svg { display: block; }
+.review-played-empty { font-size: 0.9rem; font-style: italic; color: #9a7040; margin: 6px 0; }
 
 /* ── SETTINGS PANEL ── */
 #spBody { padding: 8px 24px 24px; }

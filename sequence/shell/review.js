@@ -4,11 +4,13 @@
 
 // After an attempt: one line saying how much of the passage came up, the
 // passage above marked note by note, and a grand staff of the passage notes
-// that were played, in the order they were played. The played staff shows
-// only notes that match the passage, spelled as the passage spells them;
-// keys the passage does not have are named in the summary line, since a
-// played key has no spelling of its own. Nothing names a hand or says
-// anything about timing.
+// that were played, in the order they were played. During an attempt, if the
+// player asks for it, that staff alone fills in as each key goes down.
+//
+// The played staff shows only notes that match the passage, spelled as the
+// passage spells them; keys the passage does not have are named in the
+// summary line, since a played key has no spelling of its own. Nothing names
+// a hand or says anything about timing.
 const SequenceReview = (() => {
     const element = SequenceDisplay.element;
 
@@ -30,6 +32,20 @@ const SequenceReview = (() => {
         return lines;
     }
 
+    // The title and the staff of matched notes in the order played, or a
+    // line saying where they will appear when nothing has matched yet.
+    function playedStaff(container, passage, check) {
+        const matched = check.played.filter(pair => pair.pitch !== null).map(pair => pair.pitch);
+        container.appendChild(element('p', 'review-played-title', 'What you played, in order'));
+        if (matched.length === 0) {
+            container.appendChild(element('p', 'review-played-empty', 'Notes of the passage you play appear here.'));
+            return;
+        }
+        const staff = element('div', 'review-played');
+        container.appendChild(staff);
+        SequenceNotation.drawSequence(staff, passage.key, matched);
+    }
+
     // Fills `container` with the review of `played` against `passage`, and
     // returns the marks for the passage's notation: each passage pitch →
     // 'cameUp' or 'missed'. `container` must be showing, so the played staff
@@ -38,16 +54,16 @@ const SequenceReview = (() => {
         const check = SequenceComparison.wholePassage(passage, played);
         container.innerHTML = '';
         container.append(...summary(check));
-
-        const matched = check.played.filter(pair => pair.pitch !== null).map(pair => pair.pitch);
-        if (matched.length) {
-            container.appendChild(element('p', 'review-played-title', 'What you played, in order'));
-            const staff = element('div', 'review-played');
-            container.appendChild(staff);
-            SequenceNotation.drawSequence(staff, passage.key, matched);
-        }
+        if (check.played.some(pair => pair.pitch !== null)) playedStaff(container, passage, check);
         return new Map(check.notes.map(note => [note.pitch, note.cameUp ? 'cameUp' : 'missed']));
     }
 
-    return { show };
+    // During an attempt: the played staff alone, so far. The passage itself
+    // is left unmarked until the attempt ends.
+    function showLive(container, passage, played) {
+        container.innerHTML = '';
+        playedStaff(container, passage, SequenceComparison.wholePassage(passage, played));
+    }
+
+    return { show, showLive };
 })();
