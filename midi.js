@@ -189,9 +189,9 @@ function midiNoteName(midi) {
 // Name for a bare key with both of its names where it has two, Db/C#4, so it
 // claims no spelling.
 function midiKeyLabel(midi) {
-    const pc  = midi % 12;
-    const oct = Math.floor(midi / 12) - 1;
-    return MIDI_KEY_NAMES_FLAT[pc] + (MIDI_KEY_NAMES_FLAT[pc].length > 1 ? '/' + MIDI_KEY_NAMES_SHARP[pc] : '') + oct;
+    const pitchClass = midi % 12;
+    const octave = Math.floor(midi / 12) - 1;
+    return MIDI_KEY_NAMES_FLAT[pitchClass] + (MIDI_KEY_NAMES_FLAT[pitchClass].length > 1 ? '/' + MIDI_KEY_NAMES_SHARP[pitchClass] : '') + octave;
 }
 
 function midiUpdateHeldDisplay() {
