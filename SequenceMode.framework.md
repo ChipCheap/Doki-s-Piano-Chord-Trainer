@@ -185,6 +185,9 @@ them. How that is done is a matter for specification.
   played, in the order played and spelled as the passage spells them. Keys the
   passage does not have are named, not drawn: a played key has no spelling of
   its own.
+- An optional live aid, remembered and off by default: that played staff
+  filling in during the attempt as each key goes down. The passage itself is
+  not marked until the attempt ends.
 - Settings for difficulty, time signature, left-hand pattern, and the control
   bindings for both input methods, presented side by side.
 
