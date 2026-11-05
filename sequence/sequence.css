@@ -1,5 +1,13 @@
 /* Sequence Mode's own styles, on top of the shared style.css. */
 
+/* A smaller header than the chord trainer's, so the passage starts higher up
+   the screen: the subtitle and the link to the other mode share one line. */
+header { padding-top: 14px; }
+header h1 { font-size: clamp(1.3rem, 3.6vw, 1.9rem); }
+header p.subtitle { display: inline; margin-right: 14px; }
+header .mode-link { margin-top: 4px; }
+.app-panes { margin-top: 12px; }
+
 #sequenceCard .controls { margin-bottom: 16px; }
 
 button:disabled {
