@@ -7,7 +7,7 @@
 //
 //   empty    ─generate→ shown
 //   shown    ─generate→ shown (new passage)   ─first note→ attempt
-//   attempt  ─done→ review                    ─retry→ shown (same passage)
+//   attempt  ─done, or last note reached→ review   ─retry→ shown (same passage)
 //   review   ─retry→ shown (same passage)     ─generate→ shown (new passage)
 //
 // Anything else — generate during an attempt, done or retry with no attempt,
@@ -56,6 +56,8 @@ const SequenceState = (() => {
     }
 
     // A played key, never a command: bindings have already been taken out.
+    // The attempt ends by itself once lining up what was played against the
+    // passage reaches every note of its last group; Done ends it any time.
     function note(midi) {
         if (state === 'shown') {
             state = 'attempt';
@@ -66,6 +68,7 @@ const SequenceState = (() => {
         } else {
             return;
         }
+        if (SequenceComparison.compare(passage, played).complete) state = 'review';
         hooks.changed();
     }
 
