@@ -13,17 +13,16 @@ const SequenceComparison = (() => {
     // earliest written instances are the ones counted as played, and the
     // latest plays beyond the written count are the extra ones.
     //
-    // Returns { notes, played, extra }:
-    //   notes  — every passage note in written order as { bar, position, pitch, cameUp }
+    // Returns { notes, played }:
+    //   notes  — every passage note in written order as { pitch, cameUp }
     //   played — every played key in order as { midi, pitch }, pitch being the
     //            passage note it was paired with, or null if it is extra
-    //   extra  — the MIDI numbers of the extra keys, in the order played
     function wholePassage(passage, played) {
         const written = new Map();
         const notes = [];
         for (const group of SequencePassage.groups(passage)) {
             for (const pitch of group.pitches) {
-                const note = { bar: group.bar, position: group.position, pitch, cameUp: false };
+                const note = { pitch, cameUp: false };
                 const midi = SequencePitch.midi(pitch);
                 if (!written.has(midi)) written.set(midi, []);
                 written.get(midi).push(note);
@@ -40,7 +39,7 @@ const SequenceComparison = (() => {
             note.cameUp = true;
             return { midi, pitch: note.pitch };
         });
-        return { notes, played: pairs, extra: pairs.filter(pair => pair.pitch === null).map(pair => pair.midi) };
+        return { notes, played: pairs };
     }
 
 
@@ -230,5 +229,5 @@ const SequenceComparison = (() => {
         return { ...shifted, octaveShift: -octaves };
     }
 
-    return { wholePassage, align, compare };
+    return { wholePassage, compare };
 })();
