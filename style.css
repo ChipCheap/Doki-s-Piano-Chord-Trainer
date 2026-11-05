@@ -33,17 +33,19 @@
     }
 
     /* ── HEADER ── */
+    /* Kept small, so the music starts high up the screen: the subtitle and the
+       link to the other mode share one line. */
     header {
       width: 100%;
       max-width: 900px;
-      padding: 28px 24px 0;
+      padding: 14px 24px 0;
       text-align: center;
       position: relative;
       z-index: 1;
     }
     header h1 {
       font-family: 'Playfair Display', serif;
-      font-size: clamp(1.6rem, 5vw, 2.8rem);
+      font-size: clamp(1.3rem, 3.6vw, 1.9rem);
       color: var(--paper);
       letter-spacing: 0.06em;
       font-weight: 700;
@@ -55,7 +57,8 @@
       font-style: italic;
       color: #a09070;
       font-size: 0.9rem;
-      margin-top: 4px;
+      display: inline;
+      margin-right: 14px;
     }
 
     /* ── MAIN CARD ── */
@@ -390,7 +393,7 @@
     /* ── LINK TO THE OTHER MODE ── */
     .mode-link {
       display: inline-block;
-      margin-top: 10px;
+      margin-top: 4px;
       font-size: 0.85rem;
       letter-spacing: 0.05em;
       color: var(--sepia);
@@ -896,7 +899,7 @@
       gap: 20px;
       width: calc(100% - 32px);
       max-width: 860px;
-      margin: 20px auto 32px;
+      margin: 12px auto 32px;
     }
     .app-panes > .card {
       width: auto;
