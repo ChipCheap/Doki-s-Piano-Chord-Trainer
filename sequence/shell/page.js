@@ -94,7 +94,7 @@
     function showLiveReview(view) {
         const live = view.state === 'attempt' && settings.showPlayedLive;
         if (view.state !== 'review') review.hidden = !live;
-        if (live) SequenceReview.showLive(review, view.passage, view.played);
+        if (live) SequenceReview.showLive(review, view);
     }
 
     // In review the passage carries the review's marks, and the review sits
@@ -104,7 +104,7 @@
         notation.hidden = view.passage === null;
         review.hidden = view.state !== 'review';
         if (!view.passage) return;
-        const marks = view.state === 'review' ? SequenceReview.show(review, view.passage, view.played) : null;
+        const marks = view.state === 'review' ? SequenceReview.show(review, view) : null;
         SequenceNotation.draw(notation, view.passage, { marks, chordNames: settings.showChordNames });
         showLiveReview(view);
     }

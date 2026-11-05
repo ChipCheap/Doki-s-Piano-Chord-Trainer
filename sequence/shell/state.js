@@ -18,6 +18,9 @@ const SequenceState = (() => {
     let state = 'empty';
     let passage = null;
     let played = [];
+    // The attempt judged against the passage, worked out once per key and
+    // shared with everything that shows it.
+    let outcome = null;
     let problem = null;
     let hooks = null;
 
@@ -48,6 +51,7 @@ const SequenceState = (() => {
             leaveReview();
             passage = result.passage;
             played = [];
+            outcome = null;
             problem = null;
             state = 'shown';
             SequenceStore.savePassage(passage);
@@ -56,8 +60,8 @@ const SequenceState = (() => {
     }
 
     // A played key, never a command: bindings have already been taken out.
-    // The attempt ends by itself once lining up what was played against the
-    // passage reaches every note of its last group; Done ends it any time.
+    // The attempt ends by itself once every note of the passage's last group
+    // has been played right; Done ends it any time.
     function note(midi) {
         if (state === 'shown') {
             state = 'attempt';
@@ -68,7 +72,8 @@ const SequenceState = (() => {
         } else {
             return;
         }
-        if (SequenceComparison.compare(passage, played).complete) state = 'review';
+        outcome = SequenceComparison.compare(passage, played);
+        if (outcome.complete) state = 'review';
         hooks.changed();
     }
 
@@ -85,6 +90,7 @@ const SequenceState = (() => {
         if (state !== 'attempt' && state !== 'review') return;
         leaveReview();
         played = [];
+        outcome = null;
         state = 'shown';
         problem = null;
         hooks.changed();
@@ -97,7 +103,7 @@ const SequenceState = (() => {
     // What the page needs to draw: which commands are possible now included.
     function view() {
         return {
-            state, passage, problem,
+            state, passage, problem, outcome,
             played: [...played],
             canGenerate: state !== 'attempt',
             canDone: state === 'attempt',

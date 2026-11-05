@@ -31,8 +31,9 @@ const SequenceReview = (() => {
         };
     }
 
-    function result(passage, played) {
-        return anyOrder ? anyOrderResult(passage, played) : SequenceComparison.compare(passage, played);
+    // How the review judges: the state owner's alignment, or the simpler count.
+    function result(view) {
+        return anyOrder ? anyOrderResult(view.passage, view.played) : view.outcome;
     }
 
     function count(items, status) {
@@ -100,23 +101,24 @@ const SequenceReview = (() => {
         redraw = pageHooks.redraw;
     }
 
-    // Fills `container` with the review of `played` against `passage`, and
+    // Fills `container` with the review of the state owner's `view`, and
     // returns the marks for the passage's notation: each passage pitch → its
     // status. `container` must be showing, so the played staff can be laid
     // out for its width.
-    function show(container, passage, played) {
-        const outcome = result(passage, played);
+    function show(container, view) {
+        const outcome = result(view);
         container.innerHTML = '';
         container.append(...summary(outcome), orderToggle());
-        if (outcome.played.some(key => key.pitch !== null)) playedStaff(container, passage, outcome);
+        if (outcome.played.some(key => key.pitch !== null)) playedStaff(container, view.passage, outcome);
         return new Map(outcome.notes.map(note => [note.pitch, note.status]));
     }
 
-    // During an attempt: the played staff alone, so far. The passage itself
-    // is left unmarked until the attempt ends.
-    function showLive(container, passage, played) {
+    // During an attempt: the played staff alone, so far, always from the full
+    // alignment — the any-order count belongs to the review. The passage
+    // itself is left unmarked until the attempt ends.
+    function showLive(container, view) {
         container.innerHTML = '';
-        playedStaff(container, passage, result(passage, played));
+        playedStaff(container, view.passage, view.outcome);
     }
 
     return { start, show, showLive };
