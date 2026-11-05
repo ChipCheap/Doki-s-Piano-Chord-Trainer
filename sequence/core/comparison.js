@@ -151,13 +151,13 @@ const SequenceComparison = (() => {
         const closeGroup = () => notes[groupIndex].forEach(note => { if (note.status === 'notAttempted') note.status = 'missed'; });
         for (;;) {
             const { move } = best(playedIndex, groupIndex, mask);
-            const nearestGroup = Math.min(groupIndex, groups.length - 1);
-            const bar = groups[nearestGroup].bar;
+            const nearestGroupIndex = Math.min(groupIndex, groups.length - 1);
+            const bar = groups[nearestGroupIndex].bar;
             if (move.kind === 'stop') {
                 if (groupIndex < groups.length && mask) closeGroup();
                 for (; playedIndex < played.length; playedIndex++) {
                     keys[playedIndex].bar = bar;
-                    keyGroups[playedIndex] = nearestGroup;
+                    keyGroups[playedIndex] = nearestGroupIndex;
                 }
                 break;
             }
@@ -169,7 +169,7 @@ const SequenceComparison = (() => {
             }
             const key = keys[playedIndex];
             key.bar = bar;
-            keyGroups[playedIndex] = nearestGroup;
+            keyGroups[playedIndex] = nearestGroupIndex;
             if (move.kind !== 'extra') {
                 const note = notes[groupIndex][move.note];
                 note.status = move.kind === 'match' ? 'matched' : 'wrong';
@@ -182,10 +182,10 @@ const SequenceComparison = (() => {
 
         // A missed note and an extra key of the same pitch close by — within
         // one group either side — are one note played out of order.
-        notes.forEach((groupNotes, at) => groupNotes.forEach(note => {
+        notes.forEach((groupNotes, noteGroupIndex) => groupNotes.forEach(note => {
             if (note.status !== 'missed') return;
             const midi = SequencePitch.midi(note.pitch);
-            const partner = keys.findIndex((key, index) => key.status === 'extra' && key.midi === midi && Math.abs(keyGroups[index] - at) <= 1);
+            const partner = keys.findIndex((key, index) => key.status === 'extra' && key.midi === midi && Math.abs(keyGroups[index] - noteGroupIndex) <= 1);
             if (partner < 0) return;
             note.status = 'outOfOrder';
             keys[partner].status = 'outOfOrder';
