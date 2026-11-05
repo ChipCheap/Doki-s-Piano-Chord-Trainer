@@ -106,10 +106,12 @@ first, so the manual exit stays the one way out of an attempt.
 
 - The **whole passage is visible from the start.** It never advances, scrolls or
   reveals itself progressively — reading the page is the skill being practised.
-- An attempt ends either when the alignment has consumed the whole passage, or
-  when the player ends it manually. The manual exit always exists.
-- **Review** reports, per bar: notes missed, notes played that were not in the
-  passage, and notes played out of order. If shifting everything played by the
+- An attempt ends either when every note of the passage's last group has been
+  played right, or when the player ends it manually. The manual exit always
+  exists.
+- **Review** marks every note of the passage — right, wrong note, out of order,
+  missed or not reached — and names each key played that is not in the
+  passage, with its bar. If shifting everything played by the
   same number of octaves explains clearly more of the passage than leaving it
   unshifted, the shift is reported once as a single octave displacement and the
   remaining notes are judged as shifted, rather than as a page of wrong notes.

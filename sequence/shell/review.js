@@ -63,8 +63,8 @@ const SequenceReview = (() => {
             lines.push(element('p', 'review-extra', 'Played ' + size + ' ' + way + ' than written; judged as if moved back.'));
         }
         if (extra.length) {
-            lines.push(element('p', 'review-extra', extra.length + (extra.length === 1 ? ' key' : ' keys') +
-                ' played that the passage does not have there: ' + extra.map(key => midiKeyLabel(key.midi)).join(', ') + '.'));
+            lines.push(element('p', 'review-extra', 'Played but not in the passage: ' +
+                extra.map(key => midiKeyLabel(key.midi) + (Number.isInteger(key.bar) ? ' in bar ' + (key.bar + 1) : '')).join(', ') + '.'));
         }
         return lines;
     }
