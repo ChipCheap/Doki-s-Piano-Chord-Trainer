@@ -20,7 +20,7 @@ const SequenceNotation = (() => {
     // lines above the treble staff, two below the bass.
     const SYSTEM_HEIGHT = 240;
     // Extra room above each line for the chord names, when they are shown.
-    const CHORD_NAME_ROOM = 22;
+    const CHORD_NAME_ROOM = 32;
     const CHORD_NAME_FONT = { family: 'Georgia, serif', size: 15, weight: 'bold' };
     const STAFF_GAP = 105;
     const MARGIN = 16;
@@ -221,7 +221,7 @@ const SequenceNotation = (() => {
                     context.save();
                     context.setFont(CHORD_NAME_FONT.family, CHORD_NAME_FONT.size, CHORD_NAME_FONT.weight);
                     context.fillText(SequenceTheory.chordSymbol(passage.key, passage.bars[barIndex].chord),
-                                     treble.getNoteStartX(), top + 4);
+                                     treble.getNoteStartX(), top - 14);
                     context.restore();
                 }
 
