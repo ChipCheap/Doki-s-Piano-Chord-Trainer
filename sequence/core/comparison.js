@@ -144,8 +144,9 @@ const SequenceComparison = (() => {
 
         // Walk the best path once, recording what became of every note and key.
         const notes = groups.map(group => group.notes.map(note => ({ bar: group.bar, pitch: note.pitch, status: 'notAttempted' })));
-        const keys = played.map(midi => ({ midi, status: 'extra', pitch: null, bar: 0 }));
-        const keyGroups = [];
+        // Each key also records the group it was placed in — where in the
+        // passage it was played — so keys played together can be shown together.
+        const keys = played.map(midi => ({ midi, status: 'extra', pitch: null, bar: 0, group: 0 }));
         let playedIndex = 0, groupIndex = 0, mask = 0;
         const closeGroup = () => notes[groupIndex].forEach(note => { if (note.status === 'notAttempted') note.status = 'missed'; });
         for (;;) {
@@ -156,7 +157,7 @@ const SequenceComparison = (() => {
                 if (groupIndex < groups.length && mask) closeGroup();
                 for (; playedIndex < played.length; playedIndex++) {
                     keys[playedIndex].bar = bar;
-                    keyGroups[playedIndex] = nearestGroupIndex;
+                    keys[playedIndex].group = nearestGroupIndex;
                 }
                 break;
             }
@@ -168,7 +169,7 @@ const SequenceComparison = (() => {
             }
             const key = keys[playedIndex];
             key.bar = bar;
-            keyGroups[playedIndex] = nearestGroupIndex;
+            key.group = nearestGroupIndex;
             if (move.kind !== 'extra') {
                 const note = notes[groupIndex][move.note];
                 note.status = move.kind === 'match' ? 'matched' : 'wrong';
@@ -184,7 +185,7 @@ const SequenceComparison = (() => {
         notes.forEach((groupNotes, noteGroupIndex) => groupNotes.forEach(note => {
             if (note.status !== 'missed') return;
             const midi = SequencePitch.midi(note.pitch);
-            const partner = keys.findIndex((key, index) => key.status === 'extra' && key.midi === midi && Math.abs(keyGroups[index] - noteGroupIndex) <= 1);
+            const partner = keys.findIndex(key => key.status === 'extra' && key.midi === midi && Math.abs(key.group - noteGroupIndex) <= 1);
             if (partner < 0) return;
             note.status = 'outOfOrder';
             keys[partner].status = 'outOfOrder';
