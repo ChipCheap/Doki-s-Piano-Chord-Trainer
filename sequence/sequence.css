@@ -78,6 +78,7 @@ button[hidden] { display: none; }
   color: #7a6040;
 }
 .review-played svg { display: block; }
+.review-order { margin: 6px 0 0; font-size: 0.82rem; }
 .review-played-empty { font-size: 0.9rem; font-style: italic; color: #9a7040; margin: 6px 0; }
 
 /* ── SETTINGS PANEL ── */

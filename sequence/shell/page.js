@@ -203,6 +203,7 @@
         suspended: () => SequenceSettingsPanel.isOpen(),
     });
     SequenceSettingsPanel.start({ settings: () => settings, boundMidi, changed: settingsChanged });
+    SequenceReview.start({ redraw: () => showNotation(SequenceState.view()) });
 
     if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 })();
