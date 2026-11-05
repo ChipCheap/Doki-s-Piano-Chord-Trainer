@@ -293,6 +293,13 @@
       color: #7a6040;
       font-style: italic;
     }
+    .midi-warning {
+      font-size: 0.8rem;
+      color: #8b1a1a;
+      font-style: italic;
+      cursor: help;
+    }
+    .midi-warning[hidden] { display: none; }
     .midi-device {
       font-family: 'Source Code Pro', monospace;
       font-size: 0.75rem;

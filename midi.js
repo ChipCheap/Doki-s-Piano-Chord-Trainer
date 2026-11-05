@@ -47,6 +47,22 @@ function midiDebugRecord(data, text, suspect) {
     }
 }
 
+// A piano never sends a note number outside its keys, so one arriving is a
+// key press or release garbled on the way, lost to the app. Counted always,
+// and said beside the connection status, since nothing else would show it.
+// Releases that match no press are not counted here: the idle timeout and
+// Reset produce those too.
+let midiGarbledNotes = 0;
+
+function midiNoteGarbled() {
+    midiGarbledNotes++;
+    const warning = document.getElementById('midiWarning');
+    warning.hidden = false;
+    warning.title = midiGarbledNotes + ' key message' + (midiGarbledNotes === 1 ? '' : 's') +
+        ' arrived with a note number no piano key has, and could not be used. Usually ' +
+        'the cable or MIDI adapter garbling data; Debug shows the raw messages.';
+}
+
 function midiDebugRender() {
     midiDebugDirty = false;
     if (!midiDebugOn) return;
@@ -84,6 +100,7 @@ function onMidiMessage(event) {
     if (type === 0x90 && velocity > 0) {
         if (note < MIDI_NOTE_MIN || note > MIDI_NOTE_MAX) {
             midiDebugRecord(data, 'ch' + ch + ' note-on ' + note + ' v' + velocity + ' — out of range', true);
+            midiNoteGarbled();
             return;
         }
         midiDebugRecord(data, 'ch' + ch + ' note-on ' + note + ' v' + velocity, false);
@@ -94,6 +111,7 @@ function onMidiMessage(event) {
     } else if (type === 0x80 || (type === 0x90 && velocity === 0)) {
         if (note < MIDI_NOTE_MIN || note > MIDI_NOTE_MAX) {
             midiDebugRecord(data, 'ch' + ch + ' note-off ' + note + ' — out of range', true);
+            midiNoteGarbled();
             return;
         }
         // A note-off for a note that was never on means its note-on was lost or
@@ -230,6 +248,8 @@ document.getElementById('midiDebugClearBtn').addEventListener('click', () => {
     midiDebugLines.length = 0;
     midiDebugTotal = 0;
     midiDebugOrphans = 0;
+    midiGarbledNotes = 0;
+    document.getElementById('midiWarning').hidden = true;
     midiDebugRender();
 });
 
