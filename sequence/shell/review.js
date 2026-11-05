@@ -45,16 +45,18 @@ const SequenceReview = (() => {
         const lines = [];
         if (count(notes, 'matched') === notes.length && extra.length === 0) {
             lines.push(element('p', 'review-head ok', '✓ Every note of the passage, and nothing else.'));
-            return lines;
+        } else {
+            const parts = [count(notes, 'matched') + ' of ' + notes.length + ' right'];
+            const mistakes = [['wrong', 'wrong note', 'wrong notes', '≠'], ['outOfOrder', 'out of order', 'out of order', '↔'],
+                              ['missed', 'missed', 'missed', '✗'], ['notAttempted', 'not reached', 'not reached', '']];
+            for (const [status, one, many, symbol] of mistakes) {
+                const number = count(notes, status);
+                if (number) parts.push(number + ' ' + (number === 1 ? one : many) + (symbol ? ' ' + symbol : ''));
+            }
+            lines.push(element('p', 'review-head', parts.join(' · ')));
         }
-        const parts = [count(notes, 'matched') + ' of ' + notes.length + ' right'];
-        const mistakes = [['wrong', 'wrong note', 'wrong notes', '≠'], ['outOfOrder', 'out of order', 'out of order', '↔'],
-                          ['missed', 'missed', 'missed', '✗'], ['notAttempted', 'not reached', 'not reached', '']];
-        for (const [status, one, many, symbol] of mistakes) {
-            const number = count(notes, status);
-            if (number) parts.push(number + ' ' + (number === 1 ? one : many) + (symbol ? ' ' + symbol : ''));
-        }
-        lines.push(element('p', 'review-head', parts.join(' · ')));
+        // Said even when everything else was right, since every note is only
+        // right as judged after moving the attempt back.
         if (outcome.octaveShift) {
             const way = outcome.octaveShift > 0 ? 'higher' : 'lower';
             const size = Math.abs(outcome.octaveShift) === 1 ? 'an octave' : 'two octaves';
