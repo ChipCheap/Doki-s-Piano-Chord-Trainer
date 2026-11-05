@@ -82,10 +82,15 @@ const SequenceReview = (() => {
     }
 
     // The title and the staff of matched notes in the order played, or a
-    // line saying where they will appear when nothing has matched yet.
+    // line saying where they will appear when nothing has matched yet. After
+    // an octave shift the notes are drawn where they are written, and the
+    // title says so.
     function playedStaff(container, passage, outcome) {
         const matched = outcome.played.filter(key => key.status === 'matched' || key.status === 'outOfOrder').map(key => key.pitch);
-        container.appendChild(element('p', 'review-played-title', 'What you played, in order'));
+        const shift = outcome.octaveShift;
+        const shown = shift ? ' — played ' + (Math.abs(shift) === 1 ? 'an octave' : 'two octaves') + ' ' +
+                              (shift > 0 ? 'higher' : 'lower') + ' than shown' : '';
+        container.appendChild(element('p', 'review-played-title', 'What you played, in order' + shown));
         if (matched.length === 0) {
             container.appendChild(element('p', 'review-played-empty', 'Notes of the passage you play appear here.'));
             return;
