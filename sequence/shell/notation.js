@@ -27,8 +27,9 @@ const SequenceNotation = (() => {
     // Room a bar's notes need beyond VexFlow's own minimum, so neighbouring
     // notes and accidentals never touch.
     const BAR_PADDING = 30;
-    // The sequence of played notes: room per notehead, and the lowest staff
-    // step that belongs on the treble staff (middle C).
+    // The sequence of played notes: room per column of notes played
+    // together, and the lowest staff step that belongs on the treble staff
+    // (middle C).
     const SEQUENCE_NOTE_WIDTH = 34;
     const TREBLE_LOWEST_STEP = 28;
 
@@ -242,21 +243,38 @@ const SequenceNotation = (() => {
         }
     }
 
-    // Draws `pitches` one after another on a grand staff in `key`: what was
-    // played, in order. There is no metre and no rhythm, since no timing is
+    // One staff's notehead stack for a column of the played sequence, or a
+    // silent placeholder when none of the column's notes belong on it. The
+    // pitches go lowest first, the order VexFlow numbers a chord's heads in,
+    // so each accidental lands on its own note.
+    function sequenceNote(key, columnPitches, clef) {
+        if (columnPitches.length === 0) return new Flow.GhostNote({ duration: 'w' });
+        const pitches = [...columnPitches].sort((lower, higher) => SequencePitch.diatonicStep(lower) - SequencePitch.diatonicStep(higher));
+        const note = new Flow.StaveNote({ clef, keys: pitches.map(vexKey), duration: 'w' });
+        pitches.forEach((pitch, index) => {
+            if (pitch.alteration !== SequenceTheory.signatureAlteration(key, pitch.letter)) {
+                note.addModifier(new Flow.Accidental(ACCIDENTAL_GLYPHS[pitch.alteration]), index);
+            }
+        });
+        return note;
+    }
+
+    // Draws `columns` one after another on a grand staff in `key`: what was
+    // played, in order. Each column is a list of pitches played together —
+    // stacked as a chord. There is no metre and no rhythm, since no timing is
     // recorded: every note is a plain notehead, and a note shows its
-    // accidental whenever it differs from the key signature. Each note goes
-    // on the staff its spelling belongs to, and the other staff waits.
-    function drawSequence(container, key, pitches) {
+    // accidental whenever it differs from the key signature. Each note goes on
+    // the staff its spelling belongs to, and the other staff waits.
+    function drawSequence(container, key, columns) {
         container.innerHTML = '';
-        if (pitches.length === 0) return;
+        if (columns.length === 0) return;
         const available = Math.max(1, container.clientWidth);
         const layoutWidth = Math.max(available, LAYOUT_MIN_WIDTH);
         const usable = layoutWidth - 2 * MARGIN;
         const opening = openingWidth(key, null, false);
         const perLine = Math.max(6, Math.floor((usable - opening) / SEQUENCE_NOTE_WIDTH));
         const lines = [];
-        for (let start = 0; start < pitches.length; start += perLine) lines.push(pitches.slice(start, start + perLine));
+        for (let start = 0; start < columns.length; start += perLine) lines.push(columns.slice(start, start + perLine));
         const layoutHeight = lines.length * SYSTEM_HEIGHT;
 
         const renderer = new Flow.Renderer(container, Flow.Renderer.Backends.SVG);
@@ -267,7 +285,7 @@ const SequenceNotation = (() => {
         svg.style.width = '100%';
         svg.style.height = 'auto';
         svg.setAttribute('role', 'img');
-        svg.setAttribute('aria-label', 'The ' + pitches.length + ' passage notes played, in the order played');
+        svg.setAttribute('aria-label', 'The passage notes played, in the order played');
 
         lines.forEach((line, lineIndex) => {
             const top = lineIndex * SYSTEM_HEIGHT + 20;
@@ -280,16 +298,9 @@ const SequenceNotation = (() => {
             new Flow.StaveConnector(treble, bass).setType('singleLeft').setContext(context).draw();
             new Flow.StaveConnector(treble, bass).setType('singleRight').setContext(context).draw();
 
-            const upper = [], lower = [];
-            for (const pitch of line) {
-                const onTreble = SequencePitch.diatonicStep(pitch) >= TREBLE_LOWEST_STEP;
-                const note = new Flow.StaveNote({ clef: onTreble ? 'treble' : 'bass', keys: [vexKey(pitch)], duration: 'w' });
-                if (pitch.alteration !== SequenceTheory.signatureAlteration(key, pitch.letter)) {
-                    note.addModifier(new Flow.Accidental(ACCIDENTAL_GLYPHS[pitch.alteration]), 0);
-                }
-                (onTreble ? upper : lower).push(note);
-                (onTreble ? lower : upper).push(new Flow.GhostNote({ duration: 'w' }));
-            }
+            const onTreble = pitch => SequencePitch.diatonicStep(pitch) >= TREBLE_LOWEST_STEP;
+            const upper = line.map(column => sequenceNote(key, column.filter(onTreble), 'treble'));
+            const lower = line.map(column => sequenceNote(key, column.filter(pitch => !onTreble(pitch)), 'bass'));
             const timing = { num_beats: line.length * 4, beat_value: 4 };
             const voices = [new Flow.Voice(timing).addTickables(upper), new Flow.Voice(timing).addTickables(lower)];
             new Flow.Formatter().joinVoices([voices[0]]).joinVoices([voices[1]])

@@ -84,12 +84,31 @@ const SequenceReview = (() => {
         return label;
     }
 
+    // The matched keys in the order played, as columns of notes played
+    // together: consecutive keys the judging placed in the same group of the
+    // passage share a column. Without groups (the any-order count) every key
+    // is a column of its own.
+    function playedColumns(outcome) {
+        const columns = [];
+        let lastGroup = null;
+        for (const key of outcome.played) {
+            if (key.status !== 'matched' && key.status !== 'outOfOrder') continue;
+            if (Number.isInteger(key.group) && key.group === lastGroup) {
+                columns[columns.length - 1].push(key.pitch);
+            } else {
+                columns.push([key.pitch]);
+            }
+            lastGroup = key.group;
+        }
+        return columns;
+    }
+
     // The title and the staff of matched notes in the order played, or a
     // line saying where they will appear when nothing has matched yet. After
     // an octave shift the notes are drawn where they are written, and the
     // title says so.
     function playedStaff(container, passage, outcome) {
-        const matched = outcome.played.filter(key => key.status === 'matched' || key.status === 'outOfOrder').map(key => key.pitch);
+        const matched = playedColumns(outcome);
         const shift = outcome.octaveShift;
         const shown = shift ? ' — played ' + (Math.abs(shift) === 1 ? 'an octave' : 'two octaves') + ' ' +
                               (shift > 0 ? 'higher' : 'lower') + ' than shown' : '';
