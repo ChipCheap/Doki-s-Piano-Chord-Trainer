@@ -192,11 +192,14 @@ const SequenceComparison = (() => {
             keys[partner].pitch = note.pitch;
         }));
 
+        // Complete only when every note of the last group was played right: a
+        // neighbouring key brushed in the final chord must not end the attempt
+        // before the right one goes down.
         const finalGroup = notes[notes.length - 1];
         return {
             notes: notes.flat(),
             played: keys,
-            complete: finalGroup.every(note => note.status === 'matched' || note.status === 'wrong'),
+            complete: finalGroup.every(note => note.status === 'matched'),
         };
     }
 
