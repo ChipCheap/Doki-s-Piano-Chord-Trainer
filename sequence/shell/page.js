@@ -90,6 +90,15 @@
         status.hidden = text === '';
     }
 
+    // Every redraw empties a panel before drawing it again. The page keeps
+    // its height meanwhile, so it never gets shorter for a moment — which
+    // would scroll the player away from what they were reading.
+    function keepingHeight(redraw) {
+        document.body.style.minHeight = document.body.offsetHeight + 'px';
+        redraw();
+        document.body.style.minHeight = '';
+    }
+
     // The played panel filling in during an attempt, when the player has
     // asked for it. It never touches the passage itself.
     function showLiveReview(view) {
@@ -129,12 +138,14 @@
         soundBlocked = false;
         playRequest++;
         const view = SequenceState.view();
-        if (view.state === 'attempt' && lastState === 'attempt') {
-            showStatus(view);
-            showLiveReview(view);
-        } else {
-            render();
-        }
+        keepingHeight(() => {
+            if (view.state === 'attempt' && lastState === 'attempt') {
+                showStatus(view);
+                showLiveReview(view);
+            } else {
+                render();
+            }
+        });
         lastState = view.state;
     }
 
@@ -160,7 +171,7 @@
     chordNamesCheckbox.addEventListener('change', () => {
         settings.showChordNames = chordNamesCheckbox.checked;
         settingsChanged();
-        showNotation(SequenceState.view());
+        keepingHeight(() => showNotation(SequenceState.view()));
     });
 
     // Immediate feedback for those who want it: the played staff filling in as
@@ -171,7 +182,7 @@
     playedLiveCheckbox.addEventListener('change', () => {
         settings.showPlayedLive = playedLiveCheckbox.checked;
         settingsChanged();
-        showLiveReview(SequenceState.view());
+        keepingHeight(() => showLiveReview(SequenceState.view()));
     });
 
     controls.generate.addEventListener('click', () => SequenceState.generate());
@@ -184,7 +195,7 @@
     let drawnWidth = 0;
     new ResizeObserver(entries => {
         const width = Math.round(entries[0].contentRect.width);
-        if (width !== drawnWidth) showNotation(SequenceState.view());
+        if (width !== drawnWidth) keepingHeight(() => showNotation(SequenceState.view()));
         drawnWidth = width;
     }).observe(notation.parentElement);
 
@@ -205,7 +216,7 @@
         suspended: () => SequenceSettingsPanel.isOpen(),
     });
     SequenceSettingsPanel.start({ settings: () => settings, boundMidi, changed: settingsChanged });
-    SequenceReview.start({ redraw: () => showNotation(SequenceState.view()) });
+    SequenceReview.start({ redraw: () => keepingHeight(() => showNotation(SequenceState.view())) });
 
     if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 })();
