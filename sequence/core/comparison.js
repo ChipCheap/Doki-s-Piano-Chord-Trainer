@@ -52,20 +52,48 @@ const SequenceComparison = (() => {
     // A key close to a written note it stands in place of counts as a wrong
     // note instead of it; any other key is extra; a written note no key
     // accounts for is missed. A dropped or garbled MIDI note therefore costs
-    // only itself. Groups after the last one reached cost nothing: they were
-    // not attempted, not missed.
+    // only itself. Groups after the furthest one reached cost nothing: they
+    // were not attempted, not missed.
     //
     // The search is small dynamic programming over (played key, group, which
-    // notes of that group are taken), choosing the fewest mistakes; on a tie it
+    // notes of that group are taken), choosing the fewest mistakes. On a tie it
     // prefers a match, then a wrong note, then closing the group, then an
-    // extra key, so the result never depends on chance.
+    // extra key, and it gives up early only when that is strictly cheaper, so
+    // the result never depends on chance.
     const NEAR_MISS = 2;
     // A wrong note costs less than a miss and an extra key together, so one key
     // in a note's place reads as a slip on that note — but more than either
     // alone, so a note simply played a group late reads as one note out of
     // order rather than as two wrong notes.
     const WRONG_COST = 1.5;
+    // Room in the search's memo key for which notes of a group are taken: up
+    // to five notes a group; the generator writes at most four (a triad and a
+    // melody note).
     const MASK_SPACE = 32;
+
+    // How far the attempt got, before any judging: a marker traced along the
+    // passage, each key moving it to the next written note of the same pitch
+    // no further than the end of the bar after the marker's — far enough for
+    // a hand with a long note or a rest, near enough that a stray or garbled
+    // key matching nothing close by leaves it where it is. Returns the
+    // furthest group the marker reached, or −1 if none.
+    function reach(groups, played) {
+        const taken = new Set();
+        let marker = 0, furthest = -1;
+        for (const midi of played) {
+            const lastBar = groups[marker].bar + 1;
+            for (let groupIndex = marker; groupIndex < groups.length && groups[groupIndex].bar <= lastBar; groupIndex++) {
+                const index = groups[groupIndex].notes.findIndex((note, noteIndex) =>
+                    note.midi === midi && !taken.has(groupIndex * MASK_SPACE + noteIndex));
+                if (index < 0) continue;
+                taken.add(groupIndex * MASK_SPACE + index);
+                marker = groupIndex;
+                furthest = Math.max(furthest, groupIndex);
+                break;
+            }
+        }
+        return furthest;
+    }
 
     function align(passage, played) {
         const groups = SequencePassage.groups(passage).map(group => ({
@@ -73,6 +101,10 @@ const SequenceComparison = (() => {
             notes: group.pitches.map(pitch => ({ pitch, midi: SequencePitch.midi(pitch) })),
         }));
         const memo = new Map();
+        // The judging may not give up before the furthest group reached, so
+        // notes left out up to there — a whole hand, say — show as missed
+        // rather than as not reached.
+        const reached = reach(groups, played);
 
         function unmatchedCount(group, mask) {
             return group.notes.filter((note, index) => !(mask & (1 << index))).length;
@@ -83,9 +115,7 @@ const SequenceComparison = (() => {
             if (memo.has(memoKey)) return memo.get(memoKey);
             const group = groups[groupIndex];
             const remaining = played.length - playedIndex;
-            // Stopping here: every key left is extra, and the group in hand is
-            // missed where it was begun; the groups after it were not attempted.
-            let result = { cost: remaining + (group && mask ? unmatchedCount(group, mask) : 0), move: { kind: 'stop' } };
+            let result = { cost: Infinity, move: null };
             const consider = (cost, move) => { if (cost < result.cost) result = { cost, move }; };
 
             if (group && remaining > 0) {
@@ -102,6 +132,13 @@ const SequenceComparison = (() => {
             }
             if (group) consider(unmatchedCount(group, mask) + best(playedIndex, groupIndex + 1, 0).cost, { kind: 'close' });
             if (remaining > 0) consider(1 + best(playedIndex + 1, groupIndex, mask).cost, { kind: 'extra' });
+            // Giving up here, considered last so it wins only when strictly
+            // cheaper, and only once past the furthest group reached: every
+            // key left is extra, the group in hand is missed where it was
+            // begun, and the groups after it were not attempted.
+            if (groupIndex > reached || (groupIndex === reached && mask !== 0)) {
+                consider(remaining + (group && mask ? unmatchedCount(group, mask) : 0), { kind: 'stop' });
+            }
             memo.set(memoKey, result);
             return result;
         }
