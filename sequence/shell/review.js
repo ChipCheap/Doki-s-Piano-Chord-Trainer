@@ -54,6 +54,9 @@ const SequenceReview = (() => {
                 const number = count(notes, status);
                 if (number) parts.push(number + ' ' + (number === 1 ? one : many) + (symbol ? ' ' + symbol : ''));
             }
+            // Where the unreached part begins, when the judging knows bars.
+            const firstUnreached = notes.find(note => note.status === 'notAttempted');
+            if (firstUnreached && Number.isInteger(firstUnreached.bar)) parts[parts.length - 1] += ' from bar ' + (firstUnreached.bar + 1);
             lines.push(element('p', 'review-head', parts.join(' · ')));
         }
         // Said even when everything else was right, since every note is only
