@@ -16,6 +16,7 @@
     const notation = document.getElementById('notation');
     const notationEmpty = document.getElementById('notationEmpty');
     const review = document.getElementById('review');
+    const played = document.getElementById('played');
 
     const settings = SequenceStore.loadSettings();
     const boundMidi = () => new Set(Object.values(settings.bindings.midi).filter(key => key !== null));
@@ -89,22 +90,23 @@
         status.hidden = text === '';
     }
 
-    // The staff of played notes filling in during an attempt, when the
-    // player has asked for it. It never touches the passage itself.
+    // The played panel filling in during an attempt, when the player has
+    // asked for it. It never touches the passage itself.
     function showLiveReview(view) {
         const live = view.state === 'attempt' && settings.showPlayedLive;
-        if (view.state !== 'review') review.hidden = !live;
-        if (live) SequenceReview.showLive(review, view);
+        if (view.state !== 'review') played.hidden = !live;
+        if (live) SequenceReview.showLive(played, view);
     }
 
-    // In review the passage carries the review's marks, and the review sits
-    // beneath it.
+    // In review the passage carries the review's marks, the review's counts
+    // sit beneath it, and the played panel below that.
     function showNotation(view) {
         notationEmpty.hidden = view.passage !== null;
         notation.hidden = view.passage === null;
         review.hidden = view.state !== 'review';
+        played.hidden = true;
         if (!view.passage) return;
-        const marks = view.state === 'review' ? SequenceReview.show(review, view) : null;
+        const marks = view.state === 'review' ? SequenceReview.show(review, played, view) : null;
         SequenceNotation.draw(notation, view.passage, { marks, chordNames: settings.showChordNames });
         showLiveReview(view);
     }

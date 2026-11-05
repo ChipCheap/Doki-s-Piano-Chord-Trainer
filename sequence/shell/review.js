@@ -2,10 +2,10 @@
 //  SEQUENCE MODE — REVIEW VIEW (shell)
 // ═══════════════════════════════════════════════
 
-// After an attempt: one line of counts, the passage above marked note by note,
-// and a grand staff of the passage notes that were played, in the order they
-// were played. During an attempt, if the player asks for it, that staff alone
-// fills in as each key goes down.
+// After an attempt: one line of counts beneath the passage, the passage marked
+// note by note, and in a panel of its own a grand staff of the passage notes
+// that were played, in the order they were played. During an attempt, if the
+// player asks for it, that panel alone fills in as each key goes down.
 //
 // The marks come from lining what was played up against the passage
 // (SequenceComparison.compare): right, wrong note, out of order, missed, not
@@ -103,11 +103,12 @@ const SequenceReview = (() => {
         return columns;
     }
 
-    // The title and the staff of matched notes in the order played, or a
-    // line saying where they will appear when nothing has matched yet. After
-    // an octave shift the notes are drawn where they are written, and the
-    // title says so.
+    // Fills `container` with the title and the staff of matched notes in the
+    // order played, or a line saying where they will appear when nothing has
+    // matched yet. After an octave shift the notes are drawn where they are
+    // written, and the title says so.
     function playedStaff(container, passage, outcome) {
+        container.innerHTML = '';
         const matched = playedColumns(outcome);
         const shift = outcome.octaveShift;
         const shown = shift ? ' — played ' + (Math.abs(shift) === 1 ? 'an octave' : 'two octaves') + ' ' +
@@ -129,22 +130,24 @@ const SequenceReview = (() => {
     }
 
     // Fills `container` with the review of the state owner's `view`, and
-    // returns the marks for the passage's notation: each passage pitch → its
-    // status. `container` must be showing, so the played staff can be laid
-    // out for its width.
-    function show(container, view) {
+    // `playedContainer` with the played staff — hidden when no key matched —
+    // and returns the marks for the passage's notation: each passage pitch →
+    // its status. `playedContainer` is shown before it is drawn, so the staff
+    // can be laid out for its width.
+    function show(container, playedContainer, view) {
         const outcome = result(view);
         container.innerHTML = '';
         container.append(...summary(outcome), orderToggle());
-        if (outcome.played.some(key => key.pitch !== null)) playedStaff(container, view.passage, outcome);
+        playedContainer.hidden = !outcome.played.some(key => key.pitch !== null);
+        if (!playedContainer.hidden) playedStaff(playedContainer, view.passage, outcome);
         return new Map(outcome.notes.map(note => [note.pitch, note.status]));
     }
 
     // During an attempt: the played staff alone, so far, always from the full
     // alignment — the any-order count belongs to the review. The passage
-    // itself is left unmarked until the attempt ends.
+    // itself is left unmarked until the attempt ends. `container` must be
+    // showing.
     function showLive(container, view) {
-        container.innerHTML = '';
         playedStaff(container, view.passage, view.outcome);
     }
 

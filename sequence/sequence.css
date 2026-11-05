@@ -70,8 +70,10 @@ button[hidden] { display: none; }
 .review-head { font-size: 1.05rem; margin-bottom: 4px; }
 .review-head.ok { color: #1a5a2b; }
 .review-extra { font-size: 0.92rem; color: #5a4630; margin-bottom: 4px; }
+/* What was played: a panel of its own under the passage's card. */
+.played-card { padding: 18px 28px 20px; }
+.played-card[hidden] { display: none; }
 .review-played-title {
-  margin-top: 14px;
   font-size: 0.68rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
