@@ -37,10 +37,13 @@ over months of use.
 - Minor keys build their chords from natural minor, except that the **dominant
   chords V and vii° take the raised seventh**, which is what pulls the music
   back to the tonic. III and VII keep the natural seventh, as in i–VI–III–VII.
-  **Stepwise right-hand lines use melodic minor** (6th and 7th raised going up,
-  unraised going down), except that the melody always matches the seventh of
-  the chord underneath it. This keeps the augmented second between the 6th and
-  the raised 7th out of the melody.
+  In the melody **the 6th and 7th always agree with the chord underneath**:
+  when the chord holds one of them, the other takes the same form — both
+  raised over V and vii°, both natural over iv, VI, ii°, III and VII. Over i,
+  where the chord holds neither, they follow melodic minor by where the line
+  goes next: raised going on up, natural coming down, so a neighbour is
+  spelled by the note it returns to. This keeps the augmented second between
+  the 6th and the raised 7th out of the melody.
 - Left hand plays one accompaniment pattern per passage, from a small set of
   standard figures (block chord, broken chord, Alberti bass, waltz bass,
   root–fifth).
@@ -103,10 +106,12 @@ first, so the manual exit stays the one way out of an attempt.
 
 - The **whole passage is visible from the start.** It never advances, scrolls or
   reveals itself progressively — reading the page is the skill being practised.
-- An attempt ends either when the alignment has consumed the whole passage, or
-  when the player ends it manually. The manual exit always exists.
-- **Review** reports, per bar: notes missed, notes played that were not in the
-  passage, and notes played out of order. If shifting everything played by the
+- An attempt ends either when every note of the passage's last group has been
+  played right, or when the player ends it manually. The manual exit always
+  exists.
+- **Review** marks every note of the passage — right, wrong note, out of order,
+  missed or not reached — and names each key played that is not in the
+  passage, with its bar. If shifting everything played by the
   same number of octaves explains clearly more of the passage than leaving it
   unshifted, the shift is reported once as a single octave displacement and the
   remaining notes are judged as shifted, rather than as a page of wrong notes.
@@ -149,16 +154,21 @@ allowed at that point — never by generating material and discarding what break
 them. How that is done is a matter for specification.
 
 - **Strong beats take chord tones.** Passing and neighbour tones fall on weak
-  beats only.
+  beats only. A neighbour steps away from a chord tone and back to it; a
+  passing tone runs from a chord tone towards the next, and only another
+  passing tone going the same way may follow it.
 - **Avoided on long or accented notes:** the 4th over a major chord, and any note
   a half step above a chord tone. They may still appear as short passing notes
   on weak beats.
 - **Intervals never written in the melody:** the augmented second, the tritone
   leap, and — at easier levels — the 7th.
-- **The leading tone resolves** up to the tonic.
+- **Over the dominant chords (V, vii°) the leading tone resolves** up to the
+  tonic. Elsewhere a line may pass down through it, as C–B–A does.
+- **No note is written more than three times in a row.**
 - **Leaps of a 4th, 5th or 6th land on chord tones** at both ends, and are
   followed by a step in the opposite direction. Two large leaps in a row in the
-  same direction are allowed only when together they outline the chord.
+  same direction are allowed only when together they outline the chord; three
+  never are.
 - **Bar 3 reuses the rhythm of bar 1**, with new pitches over its own chord.
   Repetition is what makes generated material read as composed; only the rhythm
   repeats, so the pitches stay unfamiliar.
@@ -168,8 +178,23 @@ them. How that is done is a matter for specification.
 
 ### Surface
 
-- The passage, notated.
+- The passage, notated, printed straight onto the page's paper.
+- An optional reading aid, remembered: each bar's chord named above it, as on a
+  lead sheet. Off by default.
 - Controls for generate, done and retry; playback appears only after an attempt.
+- After an attempt: one line of counts — right, wrong notes, out of order,
+  missed, not reached, and an octave displacement if there was one — the
+  passage marked note by note to match (a symbol for every kind of mistake, not
+  colour alone), and a grand staff of the passage notes that were played, in
+  the order played and spelled as the passage spells them. A key within two
+  semitones of a written note it stands in place of counts as a wrong note
+  instead of it. A checkbox switches to the simpler count of which notes came
+  up in any order. Keys the
+  passage does not have are named, not drawn: a played key has no spelling of
+  its own.
+- An optional live aid, remembered and off by default: that played staff
+  filling in during the attempt as each key goes down. The passage itself is
+  not marked until the attempt ends.
 - Settings for difficulty, time signature, left-hand pattern, and the control
   bindings for both input methods, presented side by side.
 

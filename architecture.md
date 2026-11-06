@@ -55,8 +55,9 @@ direction is what lets a second mode arrive without disturbing the first.
 **Shared** (page-independent, never reference a mode):
 
 - **MIDI input** (`midi.js`) — device connection, held notes, sustain pedal,
-  idle timeout, the Reset control and the raw message log. Announces note-on,
-  note-off and reset to registered listeners.
+  idle timeout, the Reset control and the raw message log. Tells registered
+  listeners when a note is pressed, when the held set changes and when Reset
+  is pressed.
 - **Audio** (`audio.js`) — one tone, two capabilities: sounding a chord at once,
   and playing a timed list of notes.
 - **Storage** — the guarded `localStorage` read and write helpers.
@@ -124,8 +125,11 @@ sequence mode ──┘                  └──▶ storage helpers
 
 ### D5: MIDI layer decoupling
 
-- **Chosen:** `midi.js` announces note-on, note-off and reset to registered
-  listeners. The chord trainer's direct calls — the practice advance timer, the
+- **Chosen:** `midi.js` tells registered listeners when a note is pressed, when
+  the held set changes (any note-on, note-off, pedal release or panic) and when
+  the Reset button is pressed. Reset is its own announcement because only the
+  button, not an idle-timeout panic, means "start over". The chord trainer's
+  direct calls — the practice advance timer, the
   live chord check, the practice peak-held set cleared by Reset — move into the
   chord trainer's own listener.
 - **Why:** required by D2 — on `sequence.html` the chord-trainer names

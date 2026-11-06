@@ -71,6 +71,15 @@ function practiceCaptureAndAdvance() {
 }
 
 // ── Results ───────────────────────────────────
+// The single definition of "did they play it right", shared by the live
+// readout and the practice results so the two cannot disagree.
+function compareChord(chordNotes, heldMidi) {
+    const chordMidis = new Set(chordNotes.map(n => n.midi));
+    const missing = chordNotes.filter(n => !heldMidi.has(n.midi));
+    const extra   = [...heldMidi].filter(m => !chordMidis.has(m));
+    return {missing, extra, correct: missing.length === 0 && extra.length === 0};
+}
+
 function addPracticeResult(chordNotes, heldMidi, chordName) {
     const record = {
         id: practiceNextId++,

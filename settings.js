@@ -33,17 +33,7 @@ const randomSettings = {
 };
 
 // ── Persistence ───────────────────────────────
-// Every localStorage touch goes through these. Where storage is blocked (some
-// file:// contexts, strict privacy modes) the raw calls throw, and an
-// unguarded throw at load time would abort the rest of this file — taking the
-// settings button's listener at the bottom with it.
-function readStored(key) {
-    try { return localStorage.getItem(key); } catch (e) { return null; }
-}
-function writeStored(key, value) {
-    try { localStorage.setItem(key, value); return true; } catch (e) { return false; }
-}
-
+// Through the guarded helpers in storage.js, never localStorage directly.
 function saveSettingsToStorage() {
     return writeStored('pianoChordSettings', JSON.stringify(randomSettings));
 }

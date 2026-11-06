@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#1a1410" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="description" content="Piano sight-reading trainer" />
+  <title>Piano Sequence Trainer</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Playfair+Display:wght@400;700&family=Source+Code+Pro:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="sequence/sequence.css" />
+</head>
+<body>
+
+<header>
+  <h1>Doki's Piano <span>Sequence</span> Trainer</h1>
+  <p class="subtitle">Read four bars and play them!</p>
+  <a class="mode-link" href="index.html">← Chord Trainer</a>
+  <button id="settingsBtn" class="settings-btn" title="Settings" aria-label="Settings">&#9881;</button>
+</header>
+
+<div class="app-panes">
+
+<div class="card" id="sequenceCard">
+  <div class="controls">
+    <button class="btn-play" id="generateBtn">⚄ Generate</button>
+    <button class="btn-random" id="doneBtn" disabled>✓ Done</button>
+    <button class="btn-random" id="retryBtn" disabled>↺ Retry</button>
+    <button class="btn-random" id="playBtn" hidden>▶ Play</button>
+    <div class="sequence-toggles">
+      <label class="sequence-toggle">
+        <input type="checkbox" id="chordNamesCheckbox" />
+        <span>Chord names</span>
+      </label>
+      <label class="sequence-toggle">
+        <input type="checkbox" id="playedLiveCheckbox" />
+        <span>Show as you play</span>
+      </label>
+    </div>
+  </div>
+
+  <p id="sequenceStatus" class="sequence-status" role="status" hidden></p>
+
+  <!-- The whole passage, always visible at once: it never scrolls or reveals
+       itself as you play, because reading the page is the skill practised. -->
+  <div class="notation-wrapper">
+    <p id="notationEmpty" class="notation-empty">Press <strong>Generate</strong> for a passage to read.</p>
+    <div id="notation" class="notation" hidden></div>
+  </div>
+
+  <div id="review" class="sequence-review" hidden></div>
+</div>
+
+<!-- What was played: a panel of its own, drawn again with each key while the
+     passage above stays as it is. -->
+<div class="card played-card" id="played" hidden></div>
+
+<!-- MIDI PANEL: the same panel as the chord trainer's, without its chord readout -->
+<div class="card midi-card">
+  <div class="midi-header">
+    <span class="midi-dot" id="midiStatusDot"></span>
+    <span class="midi-label">MIDI Input</span>
+    <span id="midiStatus">Connecting…</span>
+    <span id="midiWarning" class="midi-warning" hidden>— inaccurate inputs measured</span>
+    <span id="midiDeviceName" class="midi-device"></span>
+    <label class="midi-debug-toggle">
+      <input type="checkbox" id="midiDebugCheckbox" />
+      <span>Debug</span>
+    </label>
+    <button id="midiResetBtn" class="midi-reset-btn"
+            title="Clear notes stuck by a missed or corrupted note-off"
+            aria-label="Clear stuck notes">⟲ Reset</button>
+  </div>
+  <div class="midi-body">
+    <div class="midi-row">
+      <span class="midi-field-label">Held notes</span>
+      <span id="midiHeldNotes" class="midi-held">—</span>
+    </div>
+
+    <!-- Raw message view. A corrupted note-on paired with a correct note-off
+         leaves a note stuck forever, and that is only visible in the raw stream. -->
+    <div id="midiDebug" class="midi-debug" hidden>
+      <div class="midi-debug-head">
+        <span id="midiDebugSummary">No messages yet.</span>
+        <button id="midiDebugClearBtn" class="midi-debug-clear">Clear log</button>
+      </div>
+      <pre id="midiDebugLog" class="midi-debug-log"></pre>
+      <p class="midi-debug-hint">
+        Lines marked <strong>!</strong> are suspect. A note-off with no matching
+        note-on means its note-on was lost or arrived with a corrupted note
+        number. (Expect one after pressing Reset while keys are down.)
+      </p>
+    </div>
+  </div>
+</div>
+
+</div><!-- /.app-panes -->
+
+<!-- SETTINGS: built by settings-panel.js -->
+<div id="settingsModal" style="display:none;">
+  <div class="settings-panel" role="dialog" aria-modal="true" aria-labelledby="spTitle">
+    <div class="sp-header">
+      <h2 class="sp-title" id="spTitle">Settings</h2>
+      <button class="sp-close" id="spCloseBtn" aria-label="Close settings">✕</button>
+    </div>
+    <p id="spWarning" class="sp-empty-warning" role="status" hidden></p>
+    <div id="spBody"></div>
+  </div>
+</div>
+
+<!-- Load order matters: shared modules, then the core, then the shell — each
+     file uses only names from files loaded before it -->
+<script src="storage.js"></script>
+<script src="midi.js"></script>
+<script src="audio.js"></script>
+<script src="vendor/vexflow/vexflow.js"></script>
+<script src="sequence/core/pitch.js"></script>
+<script src="sequence/core/theory.js"></script>
+<script src="sequence/core/meter.js"></script>
+<script src="sequence/core/difficulty.js"></script>
+<script src="sequence/core/progressions.js"></script>
+<script src="sequence/core/rhythm.js"></script>
+<script src="sequence/core/accompaniment.js"></script>
+<script src="sequence/core/passage.js"></script>
+<script src="sequence/core/melody.js"></script>
+<script src="sequence/core/generator.js"></script>
+<script src="sequence/core/comparison.js"></script>
+<script src="sequence/shell/notation.js"></script>
+<script src="sequence/shell/store.js"></script>
+<script src="sequence/shell/playback.js"></script>
+<script src="sequence/shell/state.js"></script>
+<script src="sequence/shell/bindings.js"></script>
+<script src="sequence/shell/display.js"></script>
+<script src="sequence/shell/settings-panel.js"></script>
+<script src="sequence/shell/review.js"></script>
+<script src="sequence/shell/page.js"></script>
+</body>
+</html>

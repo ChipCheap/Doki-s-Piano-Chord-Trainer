@@ -19,6 +19,7 @@
 <header>
   <h1>Doki's Piano <span>Chord</span> Trainer</h1>
   <p class="subtitle">Practice reading and playing chords!</p>
+  <a class="mode-link" href="sequence.html">Sequence Mode →</a>
   <button id="settingsBtn" class="settings-btn" title="Settings" aria-label="Settings">&#9881;</button>
 </header>
 
@@ -165,6 +166,7 @@
     <span class="midi-dot" id="midiStatusDot"></span>
     <span class="midi-label">MIDI Input</span>
     <span id="midiStatus">Connecting…</span>
+    <span id="midiWarning" class="midi-warning" hidden>— inaccurate inputs measured</span>
     <span id="midiDeviceName" class="midi-device"></span>
     <label class="midi-debug-toggle">
       <input type="checkbox" id="midiDebugCheckbox" />
@@ -253,6 +255,7 @@
 </div>
 
 <!-- Load order matters: each file may reference globals from earlier files -->
+<script src="storage.js"></script>
 <script src="music.js"></script>
 <script src="rendering.js"></script>
 <script src="audio.js"></script>

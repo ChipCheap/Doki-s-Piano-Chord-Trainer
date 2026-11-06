@@ -1,4 +1,4 @@
-const CACHE = 'piano-chord-v3';
+const CACHE = 'piano-chord-v10';
 
 // Paths are relative to this worker's own scope. Absolute '/repo-name/...'
 // paths only resolved on GitHub Pages — anywhere else (localhost, a fork under
@@ -8,6 +8,7 @@ const ASSETS = [
   './',
   './index.html',
   './style.css',
+  './storage.js',
   './music.js',
   './rendering.js',
   './audio.js',
@@ -23,7 +24,31 @@ const ASSETS = [
   './Sharp.png',
   './B.png',
   './Doki_chords_192.png',
-  './Doki_chords_512.png'
+  './Doki_chords_512.png',
+  // Sequence Mode
+  './sequence.html',
+  './sequence/sequence.css',
+  './vendor/vexflow/vexflow.js',
+  './sequence/core/pitch.js',
+  './sequence/core/theory.js',
+  './sequence/core/meter.js',
+  './sequence/core/difficulty.js',
+  './sequence/core/progressions.js',
+  './sequence/core/rhythm.js',
+  './sequence/core/accompaniment.js',
+  './sequence/core/passage.js',
+  './sequence/core/melody.js',
+  './sequence/core/generator.js',
+  './sequence/core/comparison.js',
+  './sequence/shell/notation.js',
+  './sequence/shell/store.js',
+  './sequence/shell/playback.js',
+  './sequence/shell/state.js',
+  './sequence/shell/bindings.js',
+  './sequence/shell/display.js',
+  './sequence/shell/settings-panel.js',
+  './sequence/shell/review.js',
+  './sequence/shell/page.js'
 ];
 
 const FONT_CSS = 'https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Playfair+Display:wght@400;700&family=Source+Code+Pro:wght@400;600&display=swap';
@@ -41,9 +66,14 @@ function cachePut(request, response) {
 self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(CACHE)
+      // Every asset is fetched past the browser's HTTP cache. Otherwise a new
+      // version can be installed with some files still from the old one, and
+      // the scripts depend on each other's names — an old ui.js beside a new
+      // midi.js fails to load at all.
       // The font stylesheet is added separately and allowed to fail: a network
       // hiccup on a third-party asset shouldn't take the whole install down.
-      .then(cache => cache.addAll(ASSETS).then(() => cache.add(FONT_CSS).catch(() => {})))
+      .then(cache => cache.addAll(ASSETS.map(asset => new Request(asset, { cache: 'reload' })))
+        .then(() => cache.add(FONT_CSS).catch(() => {})))
       .then(() => self.skipWaiting())
   );
 });

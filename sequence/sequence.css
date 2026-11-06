@@ -1,0 +1,124 @@
+/* Sequence Mode's own styles, on top of the shared style.css. */
+
+#sequenceCard .controls { margin-bottom: 16px; }
+
+button:disabled {
+  opacity: 0.45;
+  cursor: default;
+  border-color: #c8a96e;
+}
+button[hidden] { display: none; }
+
+/* Reading aids beside the controls, like the chord trainer's Hide target. */
+.sequence-toggles {
+  display: flex; flex-direction: column; gap: 4px;
+  margin-left: auto;
+}
+.sequence-toggle {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 0.88rem;
+  color: #7a6040;
+  cursor: pointer;
+}
+.sequence-toggle input { accent-color: var(--red-accent); width: 15px; height: 15px; cursor: pointer; }
+
+/* ── STATUS LINE: hints, failures, warnings ── */
+.sequence-status {
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: #5a4630;
+  background: var(--paper-dark);
+  border: 1px solid rgba(200,169,110,0.45);
+  border-radius: var(--radius);
+  padding: 8px 14px;
+  margin: 0 0 16px;
+  position: relative;
+}
+.sequence-status.problem {
+  color: #7a3020;
+  background: #f6e6df;
+  border-color: rgba(139,26,26,0.35);
+}
+.sequence-status[hidden] { display: none; }
+
+/* ── NOTATION ── */
+/* No background of its own: the passage is printed straight onto the card's
+   paper, as in the chord trainer. */
+.notation-wrapper {
+  position: relative;
+  min-height: 160px;
+}
+.notation { padding: 4px 0; }
+.notation[hidden] { display: none; }
+.notation svg { display: block; }
+.notation-empty {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  padding: 16px;
+  text-align: center;
+  font-style: italic;
+  color: #9a7040;
+}
+.notation-empty[hidden] { display: none; }
+
+/* ── REVIEW ── */
+.sequence-review {
+  margin-top: 18px;
+  position: relative;
+}
+.sequence-review[hidden] { display: none; }
+.review-head { font-size: 1.05rem; margin-bottom: 4px; }
+.review-head.ok { color: #1a5a2b; }
+.review-extra { font-size: 0.92rem; color: #5a4630; margin-bottom: 4px; }
+/* What was played: a panel of its own under the passage's card. */
+.played-card { padding: 18px 28px 20px; }
+.played-card[hidden] { display: none; }
+.review-played-title {
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #7a6040;
+}
+.review-played svg { display: block; }
+.review-order { margin: 6px 0 0; font-size: 0.82rem; }
+.review-played-empty { font-size: 0.9rem; font-style: italic; color: #9a7040; margin: 6px 0; }
+
+/* ── SETTINGS PANEL ── */
+#spBody { padding: 8px 24px 24px; }
+#spWarning { margin-top: 14px; }
+#spBody > .sp-row { margin: 12px 0 4px; }
+.sq-section { padding: 6px 0; border-bottom: 1px solid rgba(200,169,110,0.25); }
+.sq-section-toggle {
+  display: flex; align-items: center; gap: 8px;
+  width: 100%;
+  background: transparent; border: none; padding: 8px 0;
+  text-align: left;
+}
+.sq-section-toggle:hover .sp-section-title { color: var(--red-accent); }
+.sq-arrow { width: 1em; color: #9a7040; }
+.sq-section-body { padding: 2px 0 10px; }
+.sq-section-body[hidden] { display: none; }
+/* The shared rows leave a first column for a checkbox; these have none. */
+.sp-row.sq-plain-row { grid-template-columns: 1fr 36px 140px; }
+.sp-row.sq-select-row { grid-template-columns: 1fr auto; }
+.sq-select-row select { font-size: 0.9rem; padding: 4px 28px 4px 10px; }
+
+.sq-bindings {
+  display: grid;
+  grid-template-columns: auto 1fr 1fr;
+  gap: 8px 14px;
+  align-items: center;
+  font-size: 0.92rem;
+}
+.sq-bindings-head { font-size: 0.68rem; letter-spacing: 0.12em; text-transform: uppercase; color: #7a6040; }
+.sq-binding { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.sq-binding-key {
+  min-width: 3.2em;
+  font-family: 'Source Code Pro', monospace;
+  font-size: 0.85rem;
+}
+.sq-binding-button { font-size: 0.8rem; padding: 3px 9px; }
+@media (max-width: 520px) {
+  .sq-bindings { grid-template-columns: 1fr; }
+  .sq-bindings-head { display: none; }
+}
