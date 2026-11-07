@@ -14,7 +14,7 @@
 // a passage from another version is simply dropped, since a new one costs
 // nothing. An attempt is never stored: a reload starts it over.
 const SequenceStore = (() => {
-    const SETTINGS_KEY = 'sequenceModeSettings';
+    const SETTINGS_KEY = SettingsFile.STORAGE_KEYS.sequenceMode;
     const PASSAGE_KEY = 'sequenceModePassage';
     const SETTINGS_VERSION = 1;
     // Converters from each older settings version to the next, by the version

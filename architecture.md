@@ -20,10 +20,11 @@ direction is what lets a second mode arrive without disturbing the first.
    that needs more is raised with the user before it is built.
 2. **One page per mode.** Each mode is its own HTML page, loads only the scripts
    it uses, and links to the other mode. A mode never reaches into another
-   mode's code or state.
+   mode's code or state. The one exception is the shared settings file (D14).
 3. **Shared modules never reference a mode.** MIDI input, audio and storage
    expose what they do; modes register listeners or call them. Dependencies
-   point from modes to shared modules, never back.
+   point from modes to shared modules, never back. The shared settings file
+   names each mode's storage key and nothing more (D14).
 4. **New script files expose exactly one global name** — a namespace object —
    and keep everything else private inside the file. Existing chord-trainer
    files keep their globals until a change touches them for another reason;
@@ -61,6 +62,8 @@ direction is what lets a second mode arrive without disturbing the first.
 - **Audio** (`audio.js`) — one tone, two capabilities: sounding a chord at once,
   and playing a timed list of notes.
 - **Storage** — the guarded `localStorage` read and write helpers.
+- **Settings file** (`settings-file.js`) — one exported JSON file holding both
+  modes' settings, and its import (D14).
 - **Offline shell** — `sw.js`, `manifest.json`.
 - **Base styles** — `style.css`; a mode may add its own stylesheet.
 
@@ -160,6 +163,23 @@ sequence mode ──┘                  └──▶ storage helpers
   own behaviour-neutral commit (guideline 9), separate from D5.
 - **Alternatives considered:** duplicating the helpers in Sequence Mode (two
   copies of the storage guard).
+
+### D14: One settings file for both modes
+
+- **Chosen:** a shared `settings-file.js` exports and imports one JSON file
+  with both modes' settings in their stored form. It knows the two modes'
+  storage keys and nothing else of them, as `sw.js` knows both modes' files.
+  The exporting page gives its own settings; the other mode's are read from
+  storage. On import each page checks and applies its own part; the other
+  part is stored as it is and checked whole when its page next loads. The
+  chord trainer's older chord-only file still imports.
+- **Why:** the user wants a whole setup — chord settings, Sequence Mode's
+  parameters and key bindings — kept in one file for future setups.
+- **Drawbacks:** a narrow exception to guidelines 2 and 3. A bad part for the
+  other mode is only found when that page loads, and then falls back to its
+  defaults.
+- **Alternatives considered:** a separate file per mode (no exception, but two
+  files to keep).
 
 ## Infrastructure
 
