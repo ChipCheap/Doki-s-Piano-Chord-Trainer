@@ -7,7 +7,9 @@
 // that fills them all, the time signature and playback tempo, each hand's
 // range, and the control bindings for both input methods side by side.
 // Changes apply as they are made; the page saves them and redraws its
-// warnings. The panel edits the settings object it is given and nothing else.
+// warnings. The panel edits the settings object it is given and nothing else;
+// settings imported from a file go to the page to take in whole. The file
+// holds the chord trainer's settings too (settings-file.js).
 const SequenceSettingsPanel = (() => {
     const modal = document.getElementById('settingsModal');
     const body = document.getElementById('spBody');
@@ -287,13 +289,47 @@ const SequenceSettingsPanel = (() => {
         else if (!modal.contains(document.activeElement)) { event.preventDefault(); first.focus(); }
     }
 
+    // A button's text says for a moment how its action went, then goes back
+    // to its label.
+    function flash(target, message, label) {
+        target.textContent = message;
+        setTimeout(() => { target.textContent = label; }, 1800);
+    }
+
+    function wireFile() {
+        const exportButton = document.getElementById('spExportBtn');
+        const importInput = document.getElementById('spImportInput');
+        const importText = document.getElementById('spImportText');
+        const exportLabel = exportButton.textContent;
+        const importLabel = importText.textContent;
+        exportButton.addEventListener('click', () => {
+            SettingsFile.exportFile('sequenceMode', SequenceStore.storedSettings(hooks.settings()));
+            flash(exportButton, '✓ Exported!', exportLabel);
+        });
+        importInput.addEventListener('change', () => {
+            const file = importInput.files[0];
+            importInput.value = '';
+            if (!file) return;
+            SettingsFile.importFile(file, 'sequenceMode', part => {
+                const imported = SequenceStore.settingsFrom(part);
+                if (imported === null) return false;
+                hooks.replaced(imported);
+                return true;
+            }).then(imported => {
+                if (imported) build();
+                flash(importText, imported ? '✓ Imported!' : '✗ Invalid file', importLabel);
+            });
+        });
+    }
+
     function isOpen() {
         return modal.style.display !== 'none';
     }
 
-    // hooks: { settings(), boundMidi(), changed() }.
+    // hooks: { settings(), boundMidi(), changed(), replaced(settings) }.
     function start(pageHooks) {
         hooks = pageHooks;
+        wireFile();
         document.getElementById('settingsBtn').addEventListener('click', open);
         document.getElementById('spCloseBtn').addEventListener('click', close);
         modal.addEventListener('click', event => { if (event.target === modal) close(); });

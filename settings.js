@@ -35,7 +35,7 @@ const randomSettings = {
 // ── Persistence ───────────────────────────────
 // Through the guarded helpers in storage.js, never localStorage directly.
 function saveSettingsToStorage() {
-    return writeStored('pianoChordSettings', JSON.stringify(randomSettings));
+    return writeStored(SettingsFile.STORAGE_KEYS.chordTrainer, JSON.stringify(randomSettings));
 }
 
 // Settings persist as you change them. Requiring an explicit Save was losing
@@ -83,7 +83,7 @@ function loadSettingsFromStorage(data) {
 
 // Restore on startup
 (function () {
-    const stored = readStored('pianoChordSettings');
+    const stored = readStored(SettingsFile.STORAGE_KEYS.chordTrainer);
     if (stored) { try { loadSettingsFromStorage(JSON.parse(stored)); } catch (e) {} }
 })();
 
@@ -321,12 +321,9 @@ function buildSettingsModal() {
         flash(freshSave, ok ? '✓ Saved!' : '✗ Storage blocked', '💾 Save');
     });
 
+    // The file holds Sequence Mode's settings too (settings-file.js).
     if (freshExport) freshExport.addEventListener('click', () => {
-        const blob = new Blob([JSON.stringify(randomSettings, null, 2)], { type: 'application/json' });
-        const url  = URL.createObjectURL(blob);
-        const a    = document.createElement('a');
-        a.href = url; a.download = 'doki-chord-settings.json'; a.click();
-        URL.revokeObjectURL(url);
+        SettingsFile.exportFile('chordTrainer', randomSettings);
         flash(freshExport, '✓ Exported!', '⬇ Export File');
     });
 
@@ -335,18 +332,14 @@ function buildSettingsModal() {
         importInput.onchange = () => {
             const file = importInput.files[0];
             if (!file) return;
-            const reader = new FileReader();
-            reader.onload = e => {
-                try {
-                    loadSettingsFromStorage(JSON.parse(e.target.result));
-                    saveSettingsToStorage();
-                    buildSettingsModal();
-                    flash(document.getElementById('spImportText'), '✓ Imported!', '📂 Import JSON');
-                } catch {
-                    flash(importText, '✗ Invalid file', '📂 Import JSON');
-                }
-            };
-            reader.readAsText(file);
+            SettingsFile.importFile(file, 'chordTrainer', part => {
+                loadSettingsFromStorage(part);
+                saveSettingsToStorage();
+                return true;
+            }).then(imported => {
+                if (imported) buildSettingsModal();
+                flash(importText, imported ? '✓ Imported!' : '✗ Invalid file', '📂 Import JSON');
+            });
         };
     }
 

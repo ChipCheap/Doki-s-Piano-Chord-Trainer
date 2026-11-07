@@ -14,7 +14,7 @@
 // a passage from another version is simply dropped, since a new one costs
 // nothing. An attempt is never stored: a reload starts it over.
 const SequenceStore = (() => {
-    const SETTINGS_KEY = 'sequenceModeSettings';
+    const SETTINGS_KEY = SettingsFile.STORAGE_KEYS.sequenceMode;
     const PASSAGE_KEY = 'sequenceModePassage';
     const SETTINGS_VERSION = 1;
     // Converters from each older settings version to the next, by the version
@@ -78,19 +78,30 @@ const SequenceStore = (() => {
         };
     }
 
-    function loadSettings() {
-        let stored = readJson(SETTINGS_KEY);
-        if (stored === null || typeof stored !== 'object') return defaultSettings();
+    // Settings from their stored form, converted from an older version first,
+    // or null when they are not settings this version can read.
+    function settingsFrom(stored) {
+        if (stored === null || typeof stored !== 'object') return null;
+        let converted = stored;
         let version = stored.version;
         while (Number.isInteger(version) && version < SETTINGS_VERSION && CONVERTERS[version]) {
-            stored = CONVERTERS[version](stored);
+            converted = CONVERTERS[version](converted);
             version++;
         }
-        return version === SETTINGS_VERSION ? sanitizeSettings(stored) : defaultSettings();
+        return version === SETTINGS_VERSION ? sanitizeSettings(converted) : null;
+    }
+
+    // The stored form: the settings with their version.
+    function storedSettings(settings) {
+        return { version: SETTINGS_VERSION, ...settings };
+    }
+
+    function loadSettings() {
+        return settingsFrom(readJson(SETTINGS_KEY)) ?? defaultSettings();
     }
 
     function saveSettings(settings) {
-        return writeStored(SETTINGS_KEY, JSON.stringify({ version: SETTINGS_VERSION, ...settings }));
+        return writeStored(SETTINGS_KEY, JSON.stringify(storedSettings(settings)));
     }
 
     function loadPassage() {
@@ -102,5 +113,5 @@ const SequenceStore = (() => {
         return writeStored(PASSAGE_KEY, JSON.stringify(passage));
     }
 
-    return { COMMANDS, TEMPO, loadSettings, saveSettings, loadPassage, savePassage };
+    return { COMMANDS, TEMPO, settingsFrom, storedSettings, loadSettings, saveSettings, loadPassage, savePassage };
 })();

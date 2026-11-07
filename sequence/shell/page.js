@@ -185,6 +185,17 @@
         keepingHeight(() => showLiveReview(SequenceState.view()));
     });
 
+    // Settings imported from a file replace the current ones whole, and are
+    // saved and shown at once.
+    function replaceSettings(imported) {
+        Object.assign(settings, imported);
+        chordNamesCheckbox.checked = settings.showChordNames;
+        playedLiveCheckbox.checked = settings.showPlayedLive;
+        saveSettings();
+        SequenceState.clearProblem();
+        keepingHeight(render);
+    }
+
     controls.generate.addEventListener('click', () => SequenceState.generate());
     controls.done.addEventListener('click', () => SequenceState.done());
     controls.retry.addEventListener('click', () => SequenceState.retry());
@@ -215,7 +226,7 @@
         note: midi => SequenceState.note(midi),
         suspended: () => SequenceSettingsPanel.isOpen(),
     });
-    SequenceSettingsPanel.start({ settings: () => settings, boundMidi, changed: settingsChanged });
+    SequenceSettingsPanel.start({ settings: () => settings, boundMidi, changed: settingsChanged, replaced: replaceSettings });
     SequenceReview.start({ redraw: () => keepingHeight(() => showNotation(SequenceState.view())) });
 
     if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
